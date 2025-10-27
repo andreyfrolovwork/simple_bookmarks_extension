@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Менеджер закладок",
+  "version": "1.0.0",
+  "description": "Менеджер закладок с визуализацией",
+  "permissions": [
+    "bookmarks",
+    "storage"
+  ],
+  "action": {
+    "default_title": "Открыть менеджер закладок"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
+

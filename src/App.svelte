@@ -7,8 +7,12 @@
 	let bookmarks = $state<BookmarkItem[]>([]);
 	let loading = $state(true);
 
-	onMount(async () => {
+	async function reloadBookmarks() {
 		bookmarks = await loadBookmarks();
+	}
+
+	onMount(async () => {
+		await reloadBookmarks();
 		loading = false;
 	});
 </script>
@@ -23,5 +27,5 @@
 		<p class="text-gray-500">Загрузка закладок...</p>
 	</div>
 {:else}
-	<BookmarksBar {bookmarks} />
+	<BookmarksBar {bookmarks} onDelete={reloadBookmarks} />
 {/if}

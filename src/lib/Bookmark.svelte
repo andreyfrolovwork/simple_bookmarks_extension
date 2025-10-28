@@ -19,14 +19,8 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		if (confirm(`Удалить закладку "${item.title}"?`)) {
-			try {
-				await deleteBookmark(item.id, false);
-				onDelete?.();
-			} catch (error) {
-				alert('Не удалось удалить закладку');
-			}
-		}
+		await deleteBookmark(item.id, false);
+		onDelete?.();
 	}
 </script>
 
@@ -54,7 +48,7 @@
 	</a>
 	<button
 		onclick={handleDelete}
-		class="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-opacity hover:bg-red-600 group-hover:opacity-100"
+		class="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-opacity hover:bg-red-600 group-hover:opacity-100 [.group:not(:hover)_&]:!opacity-0"
 		title="Удалить"
 	>
 		<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

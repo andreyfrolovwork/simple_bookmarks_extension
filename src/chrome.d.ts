@@ -9,6 +9,16 @@ declare global {
 	const chrome: {
 		bookmarks: {
 			getTree(callback: (results: chrome.bookmarks.BookmarkTreeNode[]) => void): void;
+			get(
+				idOrIdList: string | string[],
+				callback: (results: chrome.bookmarks.BookmarkTreeNode[]) => void
+			): void;
+			get(idOrIdList: string | string[]): Promise<chrome.bookmarks.BookmarkTreeNode[]>;
+			getSubTree(
+				id: string,
+				callback: (results: chrome.bookmarks.BookmarkTreeNode[]) => void
+			): void;
+			getSubTree(id: string): Promise<chrome.bookmarks.BookmarkTreeNode[]>;
 			create(
 				bookmark: chrome.bookmarks.CreateDetails,
 				callback?: (result: chrome.bookmarks.BookmarkTreeNode) => void
@@ -32,6 +42,9 @@ declare global {
 		};
 		runtime: {
 			getURL(path: string): string;
+			lastError?: {
+				message?: string;
+			};
 		};
 		tabs: {
 			create(createProperties: { url: string }, callback?: (tab: any) => void): void;

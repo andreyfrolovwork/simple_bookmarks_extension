@@ -8,6 +8,7 @@
 	let loading = $state(true);
 
 	async function reloadBookmarks() {
+		console.log('🔄 Перезагрузка закладок');
 		bookmarks = await loadBookmarks();
 	}
 
@@ -27,5 +28,5 @@
 		<p class="text-gray-500">Загрузка закладок...</p>
 	</div>
 {:else}
-	<BookmarksBar {bookmarks} onDelete={reloadBookmarks} />
+	<BookmarksBar {bookmarks} onDelete={reloadBookmarks} onMove={reloadBookmarks} />
 {/if}

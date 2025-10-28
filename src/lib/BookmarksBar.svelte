@@ -2,7 +2,15 @@
 	import type { BookmarkItem, FolderType } from '../types';
 	import BookmarkFolder from './BookmarkFolder.svelte';
 
-	let { bookmarks, onDelete }: { bookmarks: BookmarkItem[]; onDelete?: () => void } = $props();
+	let { 
+		bookmarks, 
+		onDelete,
+		onMove 
+	}: { 
+		bookmarks: BookmarkItem[]; 
+		onDelete?: () => void;
+		onMove?: () => void;
+	} = $props();
 
 	let activeTab = $state<FolderType>('bookmarks-bar');
 
@@ -40,11 +48,11 @@
 	</div>
 
 	<!-- Содержимое закладок -->
-	<div class="flex-1 overflow-auto bg-gray-50 p-4">
+	<div class="flex flex-1 overflow-hidden bg-gray-50">
 		{#if activeBookmarks}
-			<BookmarkFolder item={activeBookmarks} level={0} {onDelete} />
+			<BookmarkFolder item={activeBookmarks} level={0} {onDelete} {onMove} />
 		{:else}
-			<div class="flex h-full items-center justify-center text-gray-500">
+			<div class="flex h-full w-full items-center justify-center text-gray-500">
 				<p>Закладки не найдены</p>
 			</div>
 		{/if}

@@ -6,6 +6,7 @@
 	import { dragStore } from './dragStore';
 	import { moveBookmark } from './moveBookmark';
 	import { createBookmark } from './createBookmark';
+	import { modalStore } from './modalStore.svelte';
 
 	let { 
 		item, 
@@ -61,12 +62,17 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		if (confirm(`Delete folder "${folderTitle}" and all its contents?`)) {
+		const confirmed = await modalStore.confirm(
+			`Are you sure you want to delete "${folderTitle}" and all its contents?`,
+			'Delete Folder'
+		);
+		
+		if (confirmed) {
 			try {
 				await deleteBookmark(folderId, true);
 				onDelete?.();
 			} catch (error) {
-				alert('Failed to delete folder');
+				await modalStore.alert('Failed to delete folder', 'Error');
 			}
 		}
 	}
@@ -76,7 +82,7 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		const title = prompt('New folder name:');
+		const title = await modalStore.prompt('Enter folder name:');
 		if (!title) return;
 
 		try {
@@ -84,7 +90,7 @@
 			onMove?.();
 		} catch (error) {
 			console.error('❌ Error creating folder:', error);
-			alert('Failed to create folder');
+			await modalStore.alert('Failed to create folder', 'Error');
 		}
 	}
 
@@ -93,10 +99,10 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		const url = prompt('Bookmark URL:');
+		const url = await modalStore.prompt('Enter bookmark URL:');
 		if (!url) return;
 
-		const title = prompt('Bookmark name:', url);
+		const title = await modalStore.prompt('Enter bookmark name:', url);
 		if (!title) return;
 
 		try {
@@ -104,7 +110,7 @@
 			onMove?.();
 		} catch (error) {
 			console.error('❌ Error creating bookmark:', error);
-			alert('Failed to create bookmark');
+			await modalStore.alert('Failed to create bookmark', 'Error');
 		}
 	}
 
@@ -211,7 +217,7 @@
 			}, 100);
 		} catch (error) {
 			console.error('❌ Error:', error);
-			alert('Failed to move item');
+			await modalStore.alert('Failed to move item', 'Error');
 		}
 	}
 
@@ -268,7 +274,7 @@
 		// Protection against recursion for folders
 		if (currentDropMode === 'into' && isFolder(draggedItem)) {
 			if (draggedItem.id === targetFolder.id || draggedItem.id === targetFolder.parentId) {
-				alert('Cannot move folder into itself');
+				await modalStore.alert('Cannot move folder into itself', 'Invalid Operation');
 				return;
 			}
 			// Additional check via API
@@ -282,7 +288,7 @@
 					return false;
 				};
 				if (checkDescendant(draggedTree[0])) {
-					alert('Cannot move folder into its subfolder');
+					await modalStore.alert('Cannot move folder into its subfolder', 'Invalid Operation');
 					return;
 				}
 			} catch (error) {
@@ -340,7 +346,7 @@
 			}, 100);
 		} catch (error) {
 			console.error('❌ Move error:', error);
-			alert('Failed to move item');
+			await modalStore.alert('Failed to move item', 'Error');
 		}
 	}
 </script>
@@ -411,7 +417,15 @@
 						}}
 						ondrop={(e) => handleFolderDrop(group.item, e)}
 					>
-						<Self item={group.item} level={1} {onDelete} {onMove} />
+						{#if group.item.children && group.item.children.length > 0}
+							<Self item={group.item} level={1} {onDelete} {onMove} />
+						{:else}
+							<!-- Empty folder state -->
+							<div class="py-4 text-center text-xs text-gray-400 italic">
+								<p>Empty folder</p>
+								<p class="mt-1">Drag items here or use buttons above</p>
+							</div>
+						{/if}
 					</div>
 					<!-- Folder control buttons -->
 					<div class="absolute -top-1 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -549,7 +563,14 @@
 						}}
 						ondrop={(e) => handleFolderDrop(child, e)}
 					>
-						<Self item={child} level={level + 1} {onDelete} {onMove} />
+						{#if child.children && child.children.length > 0}
+							<Self item={child} level={level + 1} {onDelete} {onMove} />
+						{:else}
+							<!-- Empty folder state -->
+							<div class="py-2 text-xs text-gray-400 italic">
+								Empty folder - drag items here or use buttons above
+							</div>
+						{/if}
 					</div>
 				</div>
 			{:else}

@@ -3,6 +3,7 @@
 	import { deleteBookmark } from './deleteBookmark';
 	import { dragStore } from './dragStore';
 	import { moveBookmark } from './moveBookmark';
+	import { modalStore } from './modalStore.svelte';
 
 	let { 
 		item, 
@@ -123,7 +124,7 @@
 			}, 100);
 		} catch (error) {
 			console.error('❌ Error:', error);
-			alert('Failed to move bookmark');
+			await modalStore.alert('Failed to move bookmark', 'Error');
 		}
 	}
 </script>

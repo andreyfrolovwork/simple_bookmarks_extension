@@ -10,13 +10,34 @@ npm install
 
 ## Development
 
-Run in development mode with test data:
+### Option 1: Web Development Mode
+Run in development mode with test data and hot reload:
 
 ```bash
 npm run dev
 ```
 
 Open http://localhost:5173 in your browser.
+
+### Option 2: Extension Development Mode (Recommended)
+Auto-rebuild to `dist/` folder on file changes:
+
+```bash
+npm run dev:extension
+```
+
+This will watch for changes and automatically rebuild the extension in the `dist/` folder. Then:
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable "Developer mode"
+3. Click "Load unpacked" and select the `dist/` folder
+4. The extension will auto-update when files change (you may need to click the reload button in Chrome)
+
+### Option 3: Manual Build Watch
+```bash
+npm run build:watch
+```
+
+Same as `dev:extension` but without development optimizations.
 
 ## Build Extension
 

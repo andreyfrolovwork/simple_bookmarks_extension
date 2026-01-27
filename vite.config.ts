@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
 	plugins: [svelte()],
 	build: {
 		rollupOptions: {
@@ -16,8 +16,11 @@ export default defineConfig({
 			}
 		},
 		watch: {
-			include: 'src/**',
-			exclude: 'node_modules/**'
-		}
+			include: ['src/**', 'public/**'],
+			exclude: ['node_modules/**', 'dist/**']
+		},
+		// Faster rebuilds in development mode
+		minify: mode === 'production' ? 'esbuild' : false,
+		sourcemap: mode === 'development'
 	}
-});
+}));

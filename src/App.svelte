@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import BookmarksBar from './lib/BookmarksBar.svelte';
+	import Modal from './lib/Modal.svelte';
 	import { loadBookmarks } from './lib/loadBookmarks';
 	import type { BookmarkItem } from './types';
 
@@ -30,3 +31,5 @@
 {:else}
 	<BookmarksBar {bookmarks} onDelete={reloadBookmarks} onMove={reloadBookmarks} />
 {/if}
+
+<Modal />

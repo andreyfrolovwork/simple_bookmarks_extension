@@ -20,7 +20,7 @@
 	let isDropTarget = $state(false);
 	let dropPosition: 'before' | 'after' | null = $state(null);
 
-	// Получаем фавикон для сайта
+	// Get favicon for site
 	function getFavicon(url: string): string {
 		try {
 			const urlObj = new URL(url);
@@ -30,7 +30,7 @@
 		}
 	}
 
-	// Обработчик удаления
+	// Delete handler
 	async function handleDelete(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -39,7 +39,7 @@
 		onDelete?.();
 	}
 
-	// Drag and Drop обработчики
+	// Drag and Drop handlers
 	function handleDragStart(e: DragEvent) {
 		e.stopPropagation();
 		
@@ -63,7 +63,7 @@
 		if (draggedItem && draggedItem.id !== item.id) {
 			isDropTarget = true;
 			
-			// Определяем позицию drop: перед или после элемента
+			// Determine drop position: before or after element
 			const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 			const midY = rect.top + rect.height / 2;
 			dropPosition = e.clientY < midY ? 'before' : 'after';
@@ -93,17 +93,17 @@
 		if (!draggedItem || draggedItem.id === item.id) return;
 
 		try {
-			// Получаем дочерние элементы родительской папки
+			// Get children of parent folder
 			const parentNode = await chrome.bookmarks.getSubTree(parentId);
 			const siblings = parentNode[0]?.children || [];
 			let targetIndex = siblings.findIndex((s: chrome.bookmarks.BookmarkTreeNode) => s.id === item.id);
 
-			// Если вставляем "после", увеличиваем индекс
+			// If inserting "after", increase index
 			if (currentDropPosition === 'after') {
 				targetIndex++;
 			}
 
-			// Если перемещаем в той же папке и вниз, нужно скорректировать индекс
+			// If moving within same folder and down, need to adjust index
 			if (draggedFromParentId === parentId) {
 				const draggedIndex = siblings.findIndex((s: chrome.bookmarks.BookmarkTreeNode) => s.id === draggedItem.id);
 				if (draggedIndex !== -1 && draggedIndex < targetIndex) {
@@ -122,18 +122,18 @@
 				onMove?.();
 			}, 100);
 		} catch (error) {
-			console.error('❌ Ошибка:', error);
-			alert('Не удалось переместить закладку');
+			console.error('❌ Error:', error);
+			alert('Failed to move bookmark');
 		}
 	}
 </script>
 
 <div class="group relative flex max-w-[350px] shrink-0 self-start">
-	<!-- Индикатор "вставить перед" -->
+	<!-- "Insert before" indicator -->
 	{#if dropPosition === 'before'}
 		<div class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-10"></div>
 	{/if}
-	<!-- Индикатор "вставить после" -->
+	<!-- "Insert after" indicator -->
 	{#if dropPosition === 'after'}
 		<div class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-10"></div>
 	{/if}
@@ -168,7 +168,7 @@
 	<button
 		onclick={handleDelete}
 		class="absolute -left-1 -top-1 flex size-5 items-center justify-center rounded-full bg-gray-400 text-white opacity-0 transition-opacity hover:bg-gray-600 group-hover:opacity-100 [.group:not(:hover)_&]:!opacity-0"
-		title="Удалить"
+		title="Delete"
 	>
 		<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
 			<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

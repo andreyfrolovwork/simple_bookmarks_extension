@@ -1,66 +1,68 @@
-# Менеджер закладок
+# Bookmark Manager
 
-Chrome расширение для управления закладками с удобной визуализацией.
+Chrome extension for managing bookmarks with convenient visualization.
 
-## Установка зависимостей
+## Install Dependencies
 
 ```bash
 npm install
 ```
 
-## Разработка
+## Development
 
-Запуск в режиме разработки с тестовыми данными:
+Run in development mode with test data:
 
 ```bash
 npm run dev
 ```
 
-Откройте http://localhost:5173 в браузере.
+Open http://localhost:5173 in your browser.
 
-## Сборка расширения
+## Build Extension
 
 ```bash
 npm run build
 ```
 
-Собранное расширение будет в папке `dist/`.
+The built extension will be in the `dist/` folder.
 
-## Установка в Chrome
+## Install in Chrome
 
-1. Соберите проект: `npm run build`
-2. Откройте Chrome и перейдите на `chrome://extensions/`
-3. Включите "Режим разработчика" (Developer mode)
-4. Нажмите "Загрузить распакованное расширение" (Load unpacked)
-5. Выберите папку `dist/`
+1. Build the project: `npm run build`
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode"
+4. Click "Load unpacked"
+5. Select the `dist/` folder
 
-## Структура проекта
+## Project Structure
 
-- `src/` - исходный код
-  - `lib/` - компоненты и логика
-    - `Bookmark.svelte` - компонент закладки
-    - `BookmarkFolder.svelte` - компонент папки с закладками
-    - `BookmarksBar.svelte` - главный компонент с вкладками
-    - `loadBookmarks.ts` - загрузка закладок из Chrome API
-    - `initBookmarks.ts` - тестовые данные для разработки
-  - `types.ts` - типы TypeScript
-  - `chrome.d.ts` - типы Chrome Extension API
-  - `App.svelte` - главный компонент приложения
-  - `main.ts` - точка входа
+- `src/` - source code
+  - `lib/` - components and logic
+    - `Bookmark.svelte` - bookmark component
+    - `BookmarkFolder.svelte` - folder with bookmarks component
+    - `BookmarksBar.svelte` - main component with tabs
+    - `loadBookmarks.ts` - loading bookmarks from Chrome API
+    - `initBookmarks.ts` - test data for development
+  - `types.ts` - TypeScript types
+  - `chrome.d.ts` - Chrome Extension API types
+  - `App.svelte` - main application component
+  - `main.ts` - entry point
 
-- `public/` - статические файлы
-  - `manifest.json` - манифест Chrome расширения
+- `public/` - static files
+  - `manifest.json` - Chrome extension manifest
   - `background.js` - background service worker
 
-## Возможности
+## Features
 
-- Визуализация закладок в удобном интерфейсе
-- Поддержка вложенных папок
-- Три вкладки: Панель закладок, Другие закладки, Мобильные закладки
-- Отображение фавиконов сайтов
-- Автоматическая загрузка из Chrome Bookmarks API
+- Bookmark visualization in a convenient interface
+- Nested folder support
+- Three tabs: Bookmarks Bar, Other Bookmarks, Mobile Bookmarks
+- Display site favicons
+- Automatic loading from Chrome Bookmarks API
+- Drag and drop to organize bookmarks
+- Create and delete bookmarks and folders
 
-## Технологии
+## Technologies
 
 - Svelte 5
 - TypeScript

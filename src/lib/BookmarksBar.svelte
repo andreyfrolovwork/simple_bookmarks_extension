@@ -14,11 +14,11 @@
 
 	let activeTab = $state<FolderType>('bookmarks-bar');
 
-	// Названия вкладок
+	// Tab names
 	const tabNames: Record<FolderType, string> = {
-		'bookmarks-bar': 'Панель закладок',
-		other: 'Другие закладки',
-		mobile: 'Мобильные закладки'
+		'bookmarks-bar': 'Bookmarks Bar',
+		other: 'Other Bookmarks',
+		mobile: 'Mobile Bookmarks'
 	};
 
 	// Получаем все папки из корня
@@ -53,7 +53,7 @@
 			<BookmarkFolder item={activeBookmarks} level={0} {onDelete} {onMove} />
 		{:else}
 			<div class="flex h-full w-full items-center justify-center text-gray-500">
-				<p>Закладки не найдены</p>
+				<p>No bookmarks found</p>
 			</div>
 		{/if}
 	</div>

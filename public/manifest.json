@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Менеджер закладок",
+  "name": "Bookmark Manager",
   "version": "1.0.0",
-  "description": "Менеджер закладок с визуализацией",
+  "description": "Bookmark manager with visualization",
   "permissions": [
     "bookmarks",
     "storage"
   ],
   "action": {
-    "default_title": "Открыть менеджер закладок"
+    "default_title": "Open Bookmark Manager"
   },
   "background": {
     "service_worker": "background.js"

@@ -24,12 +24,12 @@
 	let dropMode: 'into' | 'before' | 'after' | null = $state(null);
 	let isRootDropZone = $state(false);
 
-	// Проверяем является ли элемент папкой (есть children, но нет url)
+	// Check if item is a folder (has children but no url)
 	function isFolder(item: BookmarkItem): boolean {
 		return Boolean(item.children && item.children.length > 0 && !item.url);
 	}
 
-	// Группируем последовательные закладки для корневого уровня
+	// Group sequential bookmarks for root level
 	type GroupItem = { type: 'folder'; item: BookmarkItem } | { type: 'bookmarks'; items: BookmarkItem[] };
 	
 	const groupedItems = $derived(() => {
@@ -40,10 +40,10 @@
 		
 		for (const child of children) {
 			if (isFolder(child)) {
-				// Папка идет отдельно
+				// Folder goes separately
 				groups.push({ type: 'folder', item: child });
 			} else {
-				// Закладка - добавляем к последней группе закладок или создаем новую
+				// Bookmark - add to last bookmark group or create new one
 				const lastGroup = groups[groups.length - 1];
 				if (lastGroup && lastGroup.type === 'bookmarks') {
 					lastGroup.items.push(child);
@@ -56,61 +56,61 @@
 		return groups;
 	});
 
-	// Обработчик удаления папки
+	// Delete folder handler
 	async function handleDeleteFolder(folderId: string, folderTitle: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		
-		if (confirm(`Удалить папку "${folderTitle}" и всё её содержимое?`)) {
+		if (confirm(`Delete folder "${folderTitle}" and all its contents?`)) {
 			try {
 				await deleteBookmark(folderId, true);
 				onDelete?.();
 			} catch (error) {
-				alert('Не удалось удалить папку');
+				alert('Failed to delete folder');
 			}
 		}
 	}
 
-	// Создание новой папки
+	// Create new folder
 	async function handleCreateFolder(parentFolderId: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		
-		const title = prompt('Название новой папки:');
+		const title = prompt('New folder name:');
 		if (!title) return;
 
 		try {
 			await createBookmark(parentFolderId, title);
 			onMove?.();
 		} catch (error) {
-			console.error('❌ Ошибка создания папки:', error);
-			alert('Не удалось создать папку');
+			console.error('❌ Error creating folder:', error);
+			alert('Failed to create folder');
 		}
 	}
 
-	// Создание новой закладки
+	// Create new bookmark
 	async function handleCreateBookmark(parentFolderId: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		
-		const url = prompt('URL закладки:');
+		const url = prompt('Bookmark URL:');
 		if (!url) return;
 
-		const title = prompt('Название закладки:', url);
+		const title = prompt('Bookmark name:', url);
 		if (!title) return;
 
 		try {
 			await createBookmark(parentFolderId, title, url);
 			onMove?.();
 		} catch (error) {
-			console.error('❌ Ошибка создания закладки:', error);
-			alert('Не удалось создать закладку');
+			console.error('❌ Error creating bookmark:', error);
+			alert('Failed to create bookmark');
 		}
 	}
 
-	// Drag and Drop для папок
+	// Drag and Drop for folders
 	function handleFolderDragStart(folderItem: BookmarkItem, e: DragEvent) {
-		// Останавливаем всплытие, чтобы родительские папки не перехватили событие
+		// Stop propagation so parent folders don't intercept the event
 		e.stopPropagation();
 		
 		console.log(`📁 Drag: ${folderItem.title}`);
@@ -140,12 +140,12 @@
 		if (draggedItem && draggedItem.id !== folderItem.id) {
 			dropTargetFolderId = folderItem.id;
 			
-			// Определяем режим drop: перед, внутрь или после
+			// Determine drop mode: before, into, or after
 			const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 			const y = e.clientY - rect.top;
 			const height = rect.height;
 			
-			// Верхняя четверть - "before", нижняя четверть - "after", середина - "into"
+			// Top quarter - "before", bottom quarter - "after", middle - "into"
 			if (y < height * 0.25) {
 				dropMode = 'before';
 			} else if (y > height * 0.75) {
@@ -154,7 +154,7 @@
 				dropMode = 'into';
 			}
 
-			// Логируем только раз в 10 вызовов или при смене папки/режима
+			// Log only once per 10 calls or when folder/mode changes
 			const currentKey = `${folderItem.id}-${dropMode}`;
 			if (lastLoggedFolder !== currentKey) {
 				console.log(`📍 Over: ${folderItem.title} (${dropMode})`);
@@ -173,7 +173,7 @@
 		dropMode = null;
 	}
 
-	// Обработчики для корневой drop зоны (перемещение в конец)
+	// Handlers for root drop zone (move to end)
 	function handleRootDragOver(e: DragEvent) {
 		e.preventDefault();
 		const draggedItem = dragStore.item;
@@ -199,7 +199,7 @@
 
 		try {
 			const children = item.children || [];
-			console.log(`✅ Drop: ${draggedItem.title} → конец списка`);
+			console.log(`✅ Drop: ${draggedItem.title} → end of list`);
 
 			await moveBookmark(draggedItem.id, {
 				parentId: item.id,
@@ -210,12 +210,12 @@
 				onMove?.();
 			}, 100);
 		} catch (error) {
-			console.error('❌ Ошибка:', error);
-			alert('Не удалось переместить элемент');
+			console.error('❌ Error:', error);
+			alert('Failed to move item');
 		}
 	}
 
-	// Проверка на рекурсию - нельзя переместить папку в саму себя или в свою дочернюю папку
+	// Check for recursion - cannot move folder into itself or its subfolder
 	function isDescendant(parentId: string, childId: string, allItems: BookmarkItem[]): boolean {
 		const findItem = (id: string): BookmarkItem | null => {
 			for (const i of allItems) {
@@ -258,20 +258,20 @@
 		const draggedItem = dragStore.item;
 		const draggedFromParentId = dragStore.parentId;
 		
-		console.log(`🎯 Drop начат: ${draggedItem?.title} → ${targetFolder.title} (${currentDropMode})`);
+		console.log(`🎯 Drop started: ${draggedItem?.title} → ${targetFolder.title} (${currentDropMode})`);
 		
 		if (!draggedItem || draggedItem.id === targetFolder.id) {
-			console.log('⚠️ Отменено: тот же элемент');
+			console.log('⚠️ Cancelled: same item');
 			return;
 		}
 
-		// Защита от рекурсии для папок
+		// Protection against recursion for folders
 		if (currentDropMode === 'into' && isFolder(draggedItem)) {
 			if (draggedItem.id === targetFolder.id || draggedItem.id === targetFolder.parentId) {
-				alert('Нельзя переместить папку в саму себя');
+				alert('Cannot move folder into itself');
 				return;
 			}
-			// Дополнительная проверка через API
+			// Additional check via API
 			try {
 				const draggedTree = await chrome.bookmarks.getSubTree(draggedItem.id);
 				const checkDescendant = (node: chrome.bookmarks.BookmarkTreeNode): boolean => {
@@ -282,11 +282,11 @@
 					return false;
 				};
 				if (checkDescendant(draggedTree[0])) {
-					alert('Нельзя переместить папку в её дочернюю папку');
+					alert('Cannot move folder into its subfolder');
 					return;
 				}
 			} catch (error) {
-				console.error('❌ Ошибка проверки рекурсии:', error);
+				console.error('❌ Error checking recursion:', error);
 			}
 		}
 
@@ -294,22 +294,22 @@
 			let destination: { parentId: string; index: number };
 
 			if (currentDropMode === 'into') {
-				// Вставляем внутрь папки
+				// Insert into folder
 				destination = {
 					parentId: targetFolder.id,
 					index: 0
 				};
 			} else {
-				// Вставляем перед или после папки - нужно найти её родителя
-				// Получаем информацию о целевой папке
+				// Insert before or after folder - need to find its parent
+				// Get target folder information
 				const targetFolderInfo = await chrome.bookmarks.get(targetFolder.id);
 				const targetParentId = targetFolderInfo[0]?.parentId;
 				
 				if (!targetParentId) {
-					throw new Error('Не удалось определить родительскую папку');
+					throw new Error('Failed to determine parent folder');
 				}
 
-				// Получаем siblings из родительской папки целевой папки
+				// Get siblings from target folder's parent
 				const parentNode = await chrome.bookmarks.getSubTree(targetParentId);
 				const siblings = parentNode[0]?.children || [];
 				let targetIndex = siblings.findIndex((s: chrome.bookmarks.BookmarkTreeNode) => s.id === targetFolder.id);
@@ -318,7 +318,7 @@
 					targetIndex++;
 				}
 
-				// Корректировка если перемещаем в той же папке
+				// Adjust if moving within same folder
 				if (draggedFromParentId === targetParentId) {
 					const draggedIndex = siblings.findIndex((s: chrome.bookmarks.BookmarkTreeNode) => s.id === draggedItem.id);
 					if (draggedIndex !== -1 && draggedIndex < targetIndex) {
@@ -339,14 +339,14 @@
 				onMove?.();
 			}, 100);
 		} catch (error) {
-			console.error('❌ Ошибка перемещения:', error);
-			alert('Не удалось переместить элемент');
+			console.error('❌ Move error:', error);
+			alert('Failed to move item');
 		}
 	}
 </script>
 
 {#if level === 0}
-	<!-- Корневой уровень - горизонтальный список -->
+	<!-- Root level - horizontal list -->
 	<div 
 		class="flex h-full w-full gap-3 overflow-x-scroll p-4"
 		role="region"
@@ -356,7 +356,7 @@
 	>
 		{#each groupedItems() as group, index (index)}
 			{#if group.type === 'folder'}
-				<!-- Папка -->
+				<!-- Folder -->
 				<div 
 					class="group relative flex shrink-0 self-start flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all {dropTargetFolderId === group.item.id && dropMode === 'into' ? 'border-blue-500 bg-blue-50 border-2' : ''}"
 					draggable="true"
@@ -369,11 +369,11 @@
 					ondrop={(e) => handleFolderDrop(group.item, e)}
 					title={group.item.title}
 				>
-					<!-- Индикатор "вставить перед" -->
+					<!-- "Insert before" indicator -->
 					{#if dropTargetFolderId === group.item.id && dropMode === 'before'}
 						<div class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
 					{/if}
-					<!-- Индикатор "вставить после" -->
+					<!-- "Insert after" indicator -->
 					{#if dropTargetFolderId === group.item.id && dropMode === 'after'}
 						<div class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
 					{/if}
@@ -413,12 +413,12 @@
 					>
 						<Self item={group.item} level={1} {onDelete} {onMove} />
 					</div>
-					<!-- Кнопки управления папкой -->
+					<!-- Folder control buttons -->
 					<div class="absolute -top-1 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 						<button
 							onclick={(e) => handleCreateBookmark(group.item.id, e)}
 							class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-							title="Добавить закладку"
+							title="Add bookmark"
 						>
 							<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -427,7 +427,7 @@
 						<button
 							onclick={(e) => handleCreateFolder(group.item.id, e)}
 							class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-							title="Добавить папку"
+							title="Add folder"
 						>
 							<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6" />
@@ -436,7 +436,7 @@
 						<button
 							onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
 							class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-							title="Удалить папку"
+							title="Delete folder"
 						>
 							<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -445,7 +445,7 @@
 					</div>
 				</div>
 			{:else}
-				<!-- Группа закладок -->
+				<!-- Bookmark group -->
 				<div class="flex shrink-0 flex-col gap-2">
 					{#each group.items as bookmark (bookmark.id)}
 						<Bookmark item={bookmark} parentId={item.id} {onDelete} {onMove} />
@@ -454,15 +454,15 @@
 			{/if}
 		{/each}
 		
-		<!-- Drop зона для перемещения в конец корневого уровня -->
+		<!-- Drop zone to move to the end of root level -->
 		{#if isRootDropZone}
 			<div class="flex h-full min-w-[100px] shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-blue-500 bg-blue-50 px-4">
-				<span class="text-sm text-blue-600">Переместить сюда</span>
+				<span class="text-sm text-blue-600">Move here</span>
 			</div>
 		{/if}
 	</div>
 {:else}
-	<!-- Вложенные уровни - вертикальный список -->
+	<!-- Nested levels - vertical list -->
 	<div class="flex flex-col gap-2">
 		{#each item.children || [] as child (child.id)}
 			{#if isFolder(child)}
@@ -478,11 +478,11 @@
 					ondrop={(e) => handleFolderDrop(child, e)}
 					title={child.title}
 				>
-					<!-- Индикатор "вставить перед" -->
+					<!-- "Insert before" indicator -->
 					{#if dropTargetFolderId === child.id && dropMode === 'before'}
 						<div class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
 					{/if}
-					<!-- Индикатор "вставить после" -->
+					<!-- "Insert after" indicator -->
 					{#if dropTargetFolderId === child.id && dropMode === 'after'}
 						<div class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
 					{/if}
@@ -514,7 +514,7 @@
 							<button
 								onclick={(e) => handleCreateBookmark(child.id, e)}
 								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-								title="Добавить закладку"
+								title="Add bookmark"
 							>
 								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -523,7 +523,7 @@
 							<button
 								onclick={(e) => handleCreateFolder(child.id, e)}
 								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-								title="Добавить папку"
+								title="Add folder"
 							>
 								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6" />
@@ -532,7 +532,7 @@
 							<button
 								onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
 								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-								title="Удалить папку"
+								title="Delete folder"
 							>
 								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

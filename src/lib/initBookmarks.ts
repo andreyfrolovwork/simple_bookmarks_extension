@@ -1,6 +1,6 @@
 import type { BookmarkItem } from '../types';
 
-// Тестовые данные для разработки
+// Test data for development
 const INIT_BOOKMARKS: BookmarkItem[] = [
 	{
 		id: '0',
@@ -13,7 +13,7 @@ const INIT_BOOKMARKS: BookmarkItem[] = [
 				children: [
 					{
 						id: '2',
-						title: 'Пример папки',
+						title: 'Example Folder',
 						children: [
 							{
 								id: '3',

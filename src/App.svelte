@@ -8,7 +8,7 @@
 	let loading = $state(true);
 
 	async function reloadBookmarks() {
-		console.log('🔄 Перезагрузка закладок');
+		console.log('🔄 Reloading bookmarks');
 		bookmarks = await loadBookmarks();
 	}
 
@@ -19,13 +19,13 @@
 </script>
 
 <svelte:head>
-	<title>Менеджер закладок</title>
-	<meta name="description" content="Менеджер закладок браузера" />
+	<title>Bookmark Manager</title>
+	<meta name="description" content="Browser bookmark manager" />
 </svelte:head>
 
 {#if loading}
 	<div class="flex h-screen items-center justify-center">
-		<p class="text-gray-500">Загрузка закладок...</p>
+		<p class="text-gray-500">Loading bookmarks...</p>
 	</div>
 {:else}
 	<BookmarksBar {bookmarks} onDelete={reloadBookmarks} onMove={reloadBookmarks} />

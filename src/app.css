@@ -11,3 +11,24 @@ body {
 * {
 	box-sizing: border-box;
 }
+
+/* Плавная анимация перемещения элементов при drag and drop */
+[draggable="true"] {
+	transition: transform 0.2s ease-out, opacity 0.2s ease-out, scale 0.2s ease-out;
+}
+
+/* Анимация для индикаторов drop zones */
+@keyframes pulse-indicator {
+	0%, 100% {
+		opacity: 1;
+		transform: scaleX(1);
+	}
+	50% {
+		opacity: 0.8;
+		transform: scaleX(1.05);
+	}
+}
+
+.drop-indicator {
+	animation: pulse-indicator 1.5s ease-in-out infinite;
+}

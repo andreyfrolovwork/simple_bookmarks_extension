@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fly, scale } from 'svelte/transition';
 	import type { BookmarkItem } from '../types';
 	import Bookmark from './Bookmark.svelte';
 	import Self from './BookmarkFolder.svelte';
@@ -461,7 +462,7 @@
 			{#if group.type === 'folder'}
 				<!-- Folder -->
 				<div 
-					class="group relative flex shrink-0 self-start flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all {dropTargetFolderId === group.item.id && dropMode === 'into' ? 'border-blue-500 bg-blue-50 border-2' : ''}"
+					class="group relative flex shrink-0 self-start flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all duration-200 ease-out {isDraggingFolder && dragStore.item?.id === group.item.id ? 'opacity-30 scale-95 cursor-grabbing' : 'opacity-100 scale-100'} {dropTargetFolderId === group.item.id && dropMode === 'into' ? 'border-blue-500 bg-blue-50 border-2 scale-105 shadow-lg' : ''}"
 					draggable="true"
 					role="button"
 					tabindex="0"
@@ -474,11 +475,17 @@
 				>
 					<!-- "Insert before" indicator -->
 					{#if dropTargetFolderId === group.item.id && dropMode === 'before'}
-						<div class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
+						<div 
+							class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
+							transition:scale={{ duration: 200 }}
+						></div>
 					{/if}
 					<!-- "Insert after" indicator -->
 					{#if dropTargetFolderId === group.item.id && dropMode === 'after'}
-						<div class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
+						<div 
+							class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
+							transition:scale={{ duration: 200 }}
+						></div>
 					{/if}
 					<div 
 						class="flex items-center gap-2"
@@ -548,47 +555,47 @@
 						{#if editingFolderId === group.item.id}
 							<button
 								onclick={(e) => handleSaveFolder(group.item.id, e)}
-								class="flex size-6 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 								title="Save"
 							>
-								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 								</svg>
 							</button>
 						{:else}
 							<button
 								onclick={(e) => handleCreateBookmark(group.item.id, e)}
-								class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:shadow-md"
+								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 								title="Add bookmark"
 							>
-								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
 								</svg>
 							</button>
 							<button
 								onclick={(e) => handleCreateFolder(group.item.id, e)}
-								class="flex size-6 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 								title="Add folder"
 							>
-								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
 								</svg>
 							</button>
 							<button
 								onclick={(e) => handleStartEditFolder(group.item.id, group.item.title, e)}
-								class="flex size-6 items-center justify-center rounded-full bg-yellow-500 text-white shadow-sm transition-all hover:bg-yellow-600 hover:shadow-md"
+								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 								title="Edit folder"
 							>
-								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
 								</svg>
 							</button>
 							<button
 								onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
-								class="flex size-6 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md"
+								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 								title="Delete folder"
 							>
-								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 								</svg>
 							</button>
@@ -599,7 +606,9 @@
 				<!-- Bookmark group -->
 				<div class="flex shrink-0 flex-col gap-2">
 					{#each group.items as bookmark (bookmark.id)}
-						<Bookmark item={bookmark} parentId={item.id} {onDelete} {onMove} />
+						<div transition:fly={{ y: 10, duration: 300 }}>
+							<Bookmark item={bookmark} parentId={item.id} {onDelete} {onMove} />
+						</div>
 					{/each}
 					<!-- Add bookmark button at end of group -->
 					<button
@@ -650,7 +659,10 @@
 		
 		<!-- Drop zone to move to the end of root level -->
 		{#if isRootDropZone}
-			<div class="flex h-full min-w-[100px] shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-blue-500 bg-blue-50 px-4">
+			<div 
+				class="flex h-full min-w-[100px] shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-blue-500 bg-blue-50 px-4"
+				transition:scale={{ duration: 200 }}
+			>
 				<span class="text-sm text-blue-600">Move here</span>
 			</div>
 		{/if}
@@ -661,7 +673,7 @@
 		{#each item.children || [] as child (child.id)}
 			{#if isFolder(child)}
 				<div 
-					class="group relative flex flex-col gap-2 border-l-2 pl-3 transition-all {dropTargetFolderId === child.id && dropMode === 'into' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-400 [.group:hover:not(:has(.group:hover))>&]:border-gray-400'}"
+					class="group relative flex flex-col gap-2 border-l-2 pl-3 transition-all duration-200 ease-out {isDraggingFolder && dragStore.item?.id === child.id ? 'opacity-30 scale-95 cursor-grabbing' : 'opacity-100 scale-100'} {dropTargetFolderId === child.id && dropMode === 'into' ? 'border-blue-500 bg-blue-50 scale-105 shadow-lg' : 'border-gray-200 hover:border-blue-400 [.group:hover:not(:has(.group:hover))>&]:border-gray-400'}"
 					draggable="true"
 					role="button"
 					tabindex="0"
@@ -674,11 +686,17 @@
 				>
 					<!-- "Insert before" indicator -->
 					{#if dropTargetFolderId === child.id && dropMode === 'before'}
-						<div class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
+						<div 
+							class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
+							transition:scale={{ duration: 200 }}
+						></div>
 					{/if}
 					<!-- "Insert after" indicator -->
 					{#if dropTargetFolderId === child.id && dropMode === 'after'}
-						<div class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"></div>
+						<div 
+							class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
+							transition:scale={{ duration: 200 }}
+						></div>
 					{/if}
 					<div 
 						class="flex items-center gap-2"
@@ -725,47 +743,47 @@
 							{#if editingFolderId === child.id}
 								<button
 									onclick={(e) => handleSaveFolder(child.id, e)}
-									class="flex size-5 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 									title="Save"
 								>
-									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 									</svg>
 								</button>
 							{:else}
 								<button
 									onclick={(e) => handleCreateBookmark(child.id, e)}
-									class="flex size-5 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:shadow-md"
+									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 									title="Add bookmark"
 								>
-									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
 									</svg>
 								</button>
 								<button
 									onclick={(e) => handleCreateFolder(child.id, e)}
-									class="flex size-5 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 									title="Add folder"
 								>
-									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
 									</svg>
 								</button>
 								<button
 									onclick={(e) => handleStartEditFolder(child.id, child.title, e)}
-									class="flex size-5 items-center justify-center rounded-full bg-yellow-500 text-white shadow-sm transition-all hover:bg-yellow-600 hover:shadow-md"
+									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 									title="Edit folder"
 								>
-									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
 									</svg>
 								</button>
 								<button
 									onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
-									class="flex size-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md"
+									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
 									title="Delete folder"
 								>
-									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 									</svg>
 								</button>
@@ -808,7 +826,9 @@
 					</div>
 				</div>
 			{:else}
-				<Bookmark item={child} parentId={item.id} {onDelete} {onMove} />
+				<div transition:fly={{ y: 10, duration: 300 }}>
+					<Bookmark item={child} parentId={item.id} {onDelete} {onMove} />
+				</div>
 			{/if}
 		{/each}
 	</div>

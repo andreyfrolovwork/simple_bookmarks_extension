@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fly, scale } from 'svelte/transition';
 	import type { BookmarkItem } from '../types';
 	import { deleteBookmark } from './deleteBookmark';
 	import { dragStore } from './dragStore';
@@ -132,11 +133,17 @@
 <div class="group relative flex max-w-[350px] shrink-0 self-start">
 	<!-- "Insert before" indicator -->
 	{#if dropPosition === 'before'}
-		<div class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-10"></div>
+		<div 
+			class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-10"
+			transition:scale={{ duration: 200 }}
+		></div>
 	{/if}
 	<!-- "Insert after" indicator -->
 	{#if dropPosition === 'after'}
-		<div class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-10"></div>
+		<div 
+			class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-10"
+			transition:scale={{ duration: 200 }}
+		></div>
 	{/if}
 	
 	<a
@@ -149,7 +156,7 @@
 		ondragover={handleDragOver}
 		ondragleave={handleDragLeave}
 		ondrop={handleDrop}
-		class="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm transition-all hover:border-blue-400 hover:shadow-md {isDragging ? 'opacity-50' : ''} {isDropTarget && !dropPosition ? 'border-blue-500 bg-blue-50 border-2' : ''}"
+		class="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm transition-all duration-200 ease-out hover:border-blue-400 hover:shadow-md {isDragging ? 'opacity-30 scale-95 cursor-grabbing' : 'opacity-100 scale-100'} {isDropTarget && !dropPosition ? 'border-blue-500 bg-blue-50 border-2 scale-105 shadow-lg' : ''}"
 		title={item.title}
 	>
 		{#if item.url}

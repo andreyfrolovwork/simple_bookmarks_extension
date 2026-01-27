@@ -1,0 +1,15 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified folder for small sizes -->
+  <path d="M16 24C16 20.6863 18.6863 18 22 18H50L58 26H106C109.314 26 112 28.6863 112 32V104C112 107.314 109.314 110 106 110H22C18.6863 110 16 107.314 16 104V24Z" fill="#424242"/>
+  
+  <!-- Folder flap -->
+  <path d="M16 32L16 24C16 20.6863 18.6863 18 22 18H50L58 26H22C18.6863 26 16 28.6863 16 32Z" fill="#616161"/>
+  
+  <!-- Green circle -->
+  <circle cx="88" cy="40" r="24" fill="#7CB342"/>
+  <circle cx="88" cy="40" r="24" stroke="#5A8E2F" stroke-width="3"/>
+  
+  <!-- Plus sign -->
+  <line x1="88" y1="30" x2="88" y2="50" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <line x1="78" y1="40" x2="98" y2="40" stroke="white" stroke-width="6" stroke-linecap="round"/>
+</svg>

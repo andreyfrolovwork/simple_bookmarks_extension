@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Folder -->
+  <path d="M96 96C78.3269 96 64 110.327 64 128V384C64 401.673 78.3269 416 96 416H416C433.673 416 448 401.673 448 384V160C448 142.327 433.673 128 416 128H240L208 96H96Z" fill="#3E4347" stroke="#2C3338" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Folder tab -->
+  <path d="M64 128L64 160C64 142.327 78.3269 128 96 128H240L208 96H96C78.3269 96 64 110.327 64 128Z" fill="#4F5559" opacity="0.5"/>
+  
+  <!-- Green circle with plus -->
+  <circle cx="384" cy="160" r="80" fill="#7CB342"/>
+  <circle cx="384" cy="160" r="80" stroke="#5A8E2F" stroke-width="12"/>
+  
+  <!-- Plus sign -->
+  <path d="M384 120V200M344 160H424" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

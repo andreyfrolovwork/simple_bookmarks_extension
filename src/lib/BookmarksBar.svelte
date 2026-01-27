@@ -52,10 +52,10 @@
 		e.preventDefault();
 		
 		const data = await modalStore.bookmarkPrompt();
-		if (!data) return;
+		if (!data || !data.url) return;
 
 		try {
-			await createBookmark(activeBookmarks?.id || '1', data.title, data.url || '');
+			await createBookmark(activeBookmarks?.id || '1', data.title, data.url);
 			onMove?.();
 		} catch (error) {
 			console.error('❌ Error creating bookmark:', error);

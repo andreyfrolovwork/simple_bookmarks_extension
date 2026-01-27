@@ -200,10 +200,10 @@
 		e.stopPropagation();
 		
 		const data = await modalStore.bookmarkPrompt();
-		if (!data) return;
+		if (!data || !data.url) return;
 
 		try {
-			await createBookmark(parentFolderId, data.title, data.url || '');
+			await createBookmark(parentFolderId, data.title, data.url);
 			onMove?.();
 		} catch (error) {
 			console.error('❌ Error creating bookmark:', error);
@@ -535,20 +535,7 @@
 						{#if group.item.children?.length}
 							<Self item={group.item} level={1} {onDelete} {onMove} />
 							<!-- Add bookmark button inside folder with content -->
-							<div class="mt-2 flex justify-center">
-								<button
-									onclick={(e) => {
-										e.stopPropagation();
-										handleCreateBookmark(group.item.id, e);
-									}}
-									class="flex size-7 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white text-gray-400 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-500"
-									title="Add bookmark"
-								>
-									<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-									</svg>
-								</button>
-							</div>
+
 						{:else}
 							<!-- Empty folder state -->
 							<div class="relative z-10 flex min-h-[20px] flex-col items-center justify-center gap-2 rounded">

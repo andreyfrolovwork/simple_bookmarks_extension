@@ -3,6 +3,7 @@
 	import BookmarksBar from './lib/BookmarksBar.svelte';
 	import Modal from './lib/Modal.svelte';
 	import { loadBookmarks } from './lib/loadBookmarks';
+	import { themeStore } from './lib/themeStore.svelte';
 	import type { BookmarkItem } from './types';
 
 	let bookmarks = $state<BookmarkItem[]>([]);
@@ -14,6 +15,9 @@
 	}
 
 	onMount(async () => {
+		// Инициализация темы
+		themeStore.init();
+		
 		await reloadBookmarks();
 		loading = false;
 	});
@@ -25,8 +29,16 @@
 </svelte:head>
 
 {#if loading}
-	<div class="flex h-screen items-center justify-center">
-		<p class="text-gray-500">Loading bookmarks...</p>
+	<div class="flex h-screen items-center justify-center" style="background-color: var(--bg-primary);">
+		<div style="
+			padding: 24px;
+			background-color: var(--bg-surface);
+			border: 4px solid var(--border);
+			box-shadow: 4px 4px 0px var(--shadow);
+			color: var(--text-primary);
+		">
+			<p>Loading...</p>
+		</div>
 	</div>
 {:else}
 	<BookmarksBar {bookmarks} onDelete={reloadBookmarks} onMove={reloadBookmarks} />

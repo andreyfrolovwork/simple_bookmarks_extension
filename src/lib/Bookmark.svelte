@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fly, scale } from 'svelte/transition';
 	import type { BookmarkItem } from '../types';
+	import Icon from './Icon.svelte';
 	import { deleteBookmark } from './deleteBookmark';
 	import { dragStore } from './dragStore';
 	import { moveBookmark } from './moveBookmark';
@@ -21,6 +22,7 @@
 	let isDragging = $state(false);
 	let isDropTarget = $state(false);
 	let dropPosition: 'before' | 'after' | null = $state(null);
+	let faviconError = $state(false);
 
 	// Get favicon for site
 	function getFavicon(url: string): string {
@@ -134,14 +136,16 @@
 	<!-- "Insert before" indicator -->
 	{#if dropPosition === 'before'}
 		<div 
-			class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-10"
+			class="absolute -top-1 left-0 right-0 h-1 z-10"
+			style="background-color: var(--accent-primary);"
 			transition:scale={{ duration: 200 }}
 		></div>
 	{/if}
 	<!-- "Insert after" indicator -->
 	{#if dropPosition === 'after'}
 		<div 
-			class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-10"
+			class="absolute -bottom-1 left-0 right-0 h-1 z-10"
+			style="background-color: var(--accent-primary);"
 			transition:scale={{ duration: 200 }}
 		></div>
 	{/if}
@@ -156,31 +160,124 @@
 		ondragover={handleDragOver}
 		ondragleave={handleDragLeave}
 		ondrop={handleDrop}
-		class="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm transition-all duration-200 ease-out hover:border-blue-400 hover:shadow-md {isDragging ? 'opacity-30 scale-95 cursor-grabbing' : 'opacity-100 scale-100'} {isDropTarget && !dropPosition ? 'border-blue-500 bg-blue-50 border-2 scale-105 shadow-lg' : ''}"
+		class="pixel-bookmark"
+		class:dragging={isDragging}
+		class:drop-target={isDropTarget && !dropPosition}
 		title={item.title}
 	>
-		{#if item.url}
-			<img
-				src={getFavicon(item.url)}
-				alt=""
-				class="size-4 shrink-0"
-				onerror={(e) => {
-					if (e.currentTarget instanceof HTMLImageElement) {
-						e.currentTarget.style.display = 'none';
-					}
-				}}
-			/>
-		{/if}
-		<span class="truncate text-sm font-medium text-gray-700">{item.title}</span>
+		<span class="bookmark-icon">
+			{#if item.url && !faviconError}
+				<img
+					src={getFavicon(item.url)}
+					alt=""
+					class="favicon-img"
+					onerror={() => { faviconError = true; }}
+				/>
+			{:else}
+				<Icon name="bookmark" size={14} />
+			{/if}
+		</span>
+		<span class="bookmark-title">{item.title}</span>
 	</a>
 	<button
 		onclick={handleDelete}
-		class="absolute -left-1 -top-1 flex size-5 items-center justify-center rounded-full bg-gray-400 text-white opacity-0 transition-opacity hover:bg-gray-600 group-hover:opacity-100 [.group:not(:hover)_&]:!opacity-0"
+		class="pixel-delete-btn"
 		title="Delete"
 	>
-		<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-		</svg>
+		<Icon name="close" size={12} />
 	</button>
 </div>
+
+<style>
+	.bookmark-icon {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		color: var(--text-primary);
+		width: 16px;
+		height: 16px;
+	}
+
+	.favicon-img {
+		width: 16px;
+		height: 16px;
+		image-rendering: pixelated;
+	}
+
+	.bookmark-title {
+		font-family: 'IBM Plex Mono', monospace;
+		font-size: 13px;
+		font-weight: 500;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.pixel-bookmark {
+		display: flex;
+		flex: 1;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 12px;
+		background-color: var(--bg-surface);
+		border: 4px solid var(--border);
+		color: var(--text-primary);
+		text-decoration: none;
+		cursor: pointer;
+		transition: transform 0.1s steps(2), box-shadow 0.1s;
+		box-shadow: 4px 4px 0px var(--shadow);
+	}
+
+	.pixel-bookmark:hover {
+		transform: translate(-2px, -2px);
+		box-shadow: 6px 6px 0px var(--shadow);
+		background-color: var(--accent-secondary);
+	}
+
+	.pixel-bookmark.dragging {
+		opacity: 0.3;
+		transform: scale(0.95);
+	}
+
+	.pixel-bookmark.drop-target {
+		background-color: var(--accent-primary);
+		border-color: var(--accent-primary);
+		transform: scale(1.05);
+		box-shadow: 6px 6px 0px var(--shadow);
+	}
+
+	.pixel-delete-btn {
+		position: absolute;
+		left: -8px;
+		top: -8px;
+		width: 24px;
+		height: 24px;
+		background-color: var(--bg-secondary);
+		border: 2px solid var(--border);
+		color: var(--text-primary);
+		font-size: 12px;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.2s, transform 0.1s steps(2), box-shadow 0.1s;
+		box-shadow: 2px 2px 0px var(--shadow);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.group:hover .pixel-delete-btn {
+		opacity: 1;
+	}
+
+	.pixel-delete-btn:hover {
+		background-color: var(--accent-primary);
+		transform: translate(-1px, -1px);
+		box-shadow: 3px 3px 0px var(--shadow);
+	}
+
+	.pixel-delete-btn:active {
+		transform: translate(1px, 1px);
+		box-shadow: 1px 1px 0px var(--shadow);
+	}
+</style>
 

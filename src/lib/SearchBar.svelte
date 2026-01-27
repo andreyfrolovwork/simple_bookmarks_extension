@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { searchStore } from './searchStore.svelte';
+	import Icon from './Icon.svelte';
 
 	let inputRef: HTMLInputElement;
 
@@ -25,26 +26,12 @@
 	}
 </script>
 
-<div 
-	class="search-bar-container transition-all duration-300 ease-in-out {searchStore.isActive ? 'w-full' : 'w-64'}"
->
-	<div class="relative flex items-center">
+<div class="pixel-search-bar" class:active={searchStore.isActive}>
+	<div class="search-wrapper">
 		<!-- Иконка поиска -->
-		<div class="pointer-events-none absolute left-3 flex items-center">
-			<svg 
-				class="size-5 text-gray-400" 
-				fill="none" 
-				stroke="currentColor" 
-				viewBox="0 0 24 24"
-			>
-				<path 
-					stroke-linecap="round" 
-					stroke-linejoin="round" 
-					stroke-width="2" 
-					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-				/>
-			</svg>
-		</div>
+		<span class="search-icon">
+			<Icon name="search" size={14} />
+		</span>
 
 		<!-- Инпут -->
 		<input
@@ -53,37 +40,95 @@
 			bind:value={searchStore.query}
 			oninput={handleInput}
 			onkeydown={handleKeydown}
-			placeholder="Поиск закладок..."
-			class="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-10 text-sm text-gray-900 placeholder-gray-400 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+			placeholder="Search..."
+			class="search-input"
 		/>
 
 		<!-- Кнопка очистки -->
 		{#if searchStore.query}
 			<button
 				onclick={handleClear}
-				class="absolute right-2 flex size-6 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-				title="Очистить"
+				class="search-clear"
+				title="Clear"
 			>
-				<svg 
-					class="size-4" 
-					fill="none" 
-					stroke="currentColor" 
-					viewBox="0 0 24 24"
-				>
-					<path 
-						stroke-linecap="round" 
-						stroke-linejoin="round" 
-						stroke-width="2" 
-						d="M6 18L18 6M6 6l12 12" 
-					/>
-				</svg>
+				<Icon name="close" size={12} />
 			</button>
 		{/if}
 	</div>
 </div>
 
 <style>
-	.search-bar-container {
-		min-width: 16rem;
+	.pixel-search-bar {
+		min-width: 200px;
+		transition: all 0.2s steps(4);
+	}
+
+	.pixel-search-bar.active {
+		width: 100%;
+	}
+
+	.search-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.search-icon {
+		position: absolute;
+		left: 8px;
+		pointer-events: none;
+		display: flex;
+		align-items: center;
+		color: var(--text-secondary);
+	}
+
+	.search-input {
+		width: 100%;
+		height: 48px;
+		padding: 8px 32px 8px 32px;
+		background-color: var(--bg-surface);
+		border: 4px solid var(--border);
+		color: var(--text-primary);
+		font-size: 10px;
+		font-family: 'Press Start 2P', monospace;
+		transition: all 0.1s;
+		box-shadow: 2px 2px 0px var(--shadow);
+	}
+
+	.search-input::placeholder {
+		color: var(--text-secondary);
+	}
+
+	.search-input:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+		box-shadow: inset 2px 2px 0px var(--shadow);
+	}
+
+	.search-clear {
+		position: absolute;
+		right: 4px;
+		width: 24px;
+		height: 24px;
+		background-color: var(--bg-secondary);
+		border: 2px solid var(--border);
+		color: var(--text-primary);
+		font-size: 12px;
+		cursor: pointer;
+		transition: all 0.1s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.search-clear:hover {
+		background-color: var(--accent-primary);
+		transform: translate(-1px, -1px);
+		box-shadow: 2px 2px 0px var(--shadow);
+	}
+
+	.search-clear:active {
+		transform: translate(1px, 1px);
+		box-shadow: none;
 	}
 </style>

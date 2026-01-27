@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
 	import { searchStore } from './searchStore.svelte';
+	import Icon from './Icon.svelte';
 
-	// Получение favicon для сайта
+	let faviconErrors = $state<Set<string>>(new Set());
+
+	// Get favicon for site
 	function getFavicon(url: string): string {
 		try {
 			const urlObj = new URL(url);
@@ -10,6 +13,10 @@
 		} catch {
 			return '';
 		}
+	}
+
+	function handleFaviconError(id: string) {
+		faviconErrors = new Set([...faviconErrors, id]);
 	}
 
 	// Открытие закладки
@@ -46,9 +53,9 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if searchStore.isActive}
-	<!-- Backdrop - только под шапкой -->
+	<!-- Backdrop -->
 	<div
-		class="fixed inset-x-0 bottom-0 top-[60px] z-40 bg-black/50 backdrop-blur-sm"
+		class="pixel-backdrop"
 		transition:fade={{ duration: 200 }}
 		onclick={handleBackdropClick}
 		onkeydown={(e) => e.key === 'Enter' && handleBackdropClick(e as unknown as MouseEvent)}
@@ -57,151 +64,230 @@
 	>
 		<!-- Результаты поиска -->
 		<div
-			class="mx-auto mt-4 max-w-3xl rounded-lg bg-white shadow-2xl"
+			class="pixel-results-container"
 			transition:fly={{ y: -20, duration: 300 }}
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 			role="dialog"
 			tabindex="0"
 		>
-			<!-- Заголовок с количеством результатов -->
-			<div class="border-b border-gray-200 px-6 py-4">
-				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-semibold text-gray-900">
-						{#if searchStore.resultsCount > 0}
-							Найдено: {searchStore.resultsCount}
-						{:else}
-							Ничего не найдено
-						{/if}
-					</h3>
-					<button
-						onclick={closeSearch}
-						class="flex size-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-						title="Закрыть"
-					>
-						<svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/>
-						</svg>
-					</button>
+			<!-- Заголовок -->
+			<div class="pixel-results-header">
+				<div class="results-title">
+					{#if searchStore.resultsCount > 0}
+						Found: {searchStore.resultsCount}
+					{:else}
+						Not found
+					{/if}
 				</div>
+				<button
+					onclick={closeSearch}
+					class="pixel-close-btn"
+					title="Close"
+				>
+					<Icon name="close" size={14} />
+				</button>
 			</div>
 
 			<!-- Список результатов -->
-			<div class="max-h-[60vh] overflow-y-auto">
+			<div class="pixel-results-list">
 				{#if searchStore.resultsCount > 0}
-					<div class="divide-y divide-gray-100">
-						{#each searchStore.results as result (result.item.id)}
-							<button
-								onclick={() => openBookmark(result.item.url || '')}
-								class="flex w-full items-start gap-4 px-6 py-4 text-left transition-colors hover:bg-gray-50"
-							>
-								<!-- Favicon -->
-								<div class="mt-1 shrink-0">
-									{#if result.item.url}
+					{#each searchStore.results as result (result.item.id)}
+						<button
+							onclick={() => openBookmark(result.item.url || '')}
+							class="pixel-result-item"
+						>
+							<!-- Favicon -->
+							<div class="result-icon">
+								{#if result.item.url}
+									{#if !faviconErrors.has(result.item.id)}
 										<img
 											src={getFavicon(result.item.url)}
 											alt=""
-											class="size-5"
-											onerror={(e) => {
-												if (e.currentTarget instanceof HTMLImageElement) {
-													e.currentTarget.style.display = 'none';
-												}
-											}}
+											class="result-favicon"
+											onerror={() => handleFaviconError(result.item.id)}
 										/>
 									{:else}
-										<svg
-											class="size-5 text-gray-400"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-											/>
-										</svg>
+										<Icon name="bookmark" size={16} />
 									{/if}
-								</div>
+								{:else}
+									<Icon name="folder" size={16} />
+								{/if}
+							</div>
 
-								<!-- Информация о закладке -->
-								<div class="min-w-0 flex-1">
-									<!-- Название -->
-									<div class="mb-1 font-medium text-gray-900">
-										{result.item.title}
-									</div>
+							<!-- Информация -->
+							<div class="result-info">
+								<div class="result-title">{result.item.title}</div>
+								{#if result.item.url}
+									<div class="result-url">{truncateUrl(result.item.url, 50)}</div>
+								{/if}
+								{#if result.item.path}
+									<div class="result-path">📁 {result.item.path}</div>
+								{/if}
+							</div>
 
-									<!-- URL -->
-									{#if result.item.url}
-										<div class="mb-1 text-sm text-gray-500">
-											{truncateUrl(result.item.url)}
-										</div>
-									{/if}
-
-									<!-- Путь к папке (breadcrumbs) -->
-									{#if result.item.path}
-										<div class="flex items-center gap-1 text-xs text-gray-400">
-											<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-												/>
-											</svg>
-											<span>{result.item.path}</span>
-										</div>
-									{/if}
-
-									<!-- Оценка релевантности (для отладки) -->
-									{#if result.score !== undefined}
-										<div class="mt-1 text-xs text-gray-300">
-											Score: {result.score.toFixed(3)}
-										</div>
-									{/if}
-								</div>
-
-								<!-- Иконка перехода -->
-								<div class="mt-1 shrink-0">
-									<svg
-										class="size-5 text-gray-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-										/>
-									</svg>
-								</div>
-							</button>
-						{/each}
-					</div>
+							<!-- Иконка перехода -->
+							<div class="result-arrow">
+								<Icon name="external-link" size={14} />
+							</div>
+						</button>
+					{/each}
 				{:else}
 					<!-- Пустое состояние -->
-					<div class="flex flex-col items-center justify-center gap-4 py-16 text-gray-400">
-						<svg class="size-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1.5"
-								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-							/>
-						</svg>
-						<p class="text-lg font-medium">Ничего не найдено</p>
-						<p class="text-sm">Попробуйте изменить поисковый запрос</p>
+					<div class="pixel-empty-state">
+						<div style="color: var(--text-secondary);">
+							<Icon name="search" size={48} />
+						</div>
+						<p style="font-size: 10px; margin-top: 16px;">Nothing found</p>
+						<p style="font-size: 8px; margin-top: 8px; color: var(--text-secondary);">Try another query</p>
 					</div>
 				{/if}
 			</div>
 		</div>
 	</div>
 {/if}
+
+<style>
+	.pixel-backdrop {
+		position: fixed;
+		inset: 0;
+		top: 60px;
+		z-index: 40;
+		background-color: rgba(0, 0, 0, 0.7);
+	}
+
+	.pixel-results-container {
+		margin: 16px auto;
+		max-width: 800px;
+		background-color: var(--bg-surface);
+		border: 4px solid var(--border);
+		box-shadow: 8px 8px 0px var(--shadow);
+	}
+
+	.pixel-results-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 16px;
+		background-color: var(--bg-secondary);
+		border-bottom: 4px solid var(--border);
+	}
+
+	.results-title {
+		font-size: 10px;
+		font-weight: bold;
+		color: var(--text-primary);
+		text-transform: uppercase;
+	}
+
+	.pixel-close-btn {
+		width: 24px;
+		height: 24px;
+		background-color: var(--bg-surface);
+		border: 2px solid var(--border);
+		color: var(--text-primary);
+		font-size: 14px;
+		cursor: pointer;
+		transition: all 0.1s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pixel-close-btn:hover {
+		background-color: var(--accent-primary);
+		transform: translate(-1px, -1px);
+		box-shadow: 2px 2px 0px var(--shadow);
+	}
+
+	.pixel-results-list {
+		max-height: 60vh;
+		overflow-y: auto;
+		background-color: var(--bg-primary);
+	}
+
+	.pixel-result-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		width: 100%;
+		padding: 12px 16px;
+		background-color: var(--bg-surface);
+		border: none;
+		border-bottom: 2px solid var(--border);
+		color: var(--text-primary);
+		text-align: left;
+		cursor: pointer;
+		transition: all 0.1s;
+	}
+
+	.pixel-result-item:hover {
+		background-color: var(--accent-secondary);
+		transform: translateX(2px);
+		border-left: 4px solid var(--accent-primary);
+		padding-left: 12px;
+	}
+
+	.result-icon {
+		margin-top: 2px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		color: var(--text-primary);
+		width: 16px;
+		height: 16px;
+	}
+
+	.result-favicon {
+		width: 16px;
+		height: 16px;
+		image-rendering: pixelated;
+	}
+
+	.result-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.result-title {
+		font-size: 10px;
+		font-weight: bold;
+		margin-bottom: 4px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.result-url {
+		font-size: 11px;
+		font-family: 'IBM Plex Mono', monospace;
+		color: var(--text-secondary);
+		margin-bottom: 4px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.result-path {
+		font-size: 7px;
+		color: var(--text-secondary);
+	}
+
+	.result-arrow {
+		margin-top: 2px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		color: var(--text-secondary);
+	}
+
+	.pixel-empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 64px 16px;
+		text-align: center;
+		color: var(--text-primary);
+	}
+</style>

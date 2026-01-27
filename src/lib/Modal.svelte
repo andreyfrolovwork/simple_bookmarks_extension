@@ -155,7 +155,7 @@
 
 {#if modalStore.isOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+		class="pixel-modal-backdrop"
 		onclick={handleBackdropClick}
 		onkeydown={handleKeydown}
 		role="dialog"
@@ -164,19 +164,19 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div 
-			class="w-full max-w-md rounded-lg bg-white shadow-xl"
+			class="pixel-modal-dialog"
 			transition:scale={{ duration: 200, start: 0.95 }}
 			onclick={(e) => e.stopPropagation()}
 		>
 			<!-- Header -->
-			<div class="border-b border-gray-200 px-6 py-4">
-				<h3 class="text-lg font-semibold text-gray-900">{modalStore.title}</h3>
+			<div class="pixel-modal-header">
+				<h3 class="modal-title">{modalStore.title}</h3>
 			</div>
 
 			<!-- Content -->
-			<div class="px-6 py-4">
+			<div class="pixel-modal-content">
 				{#if modalStore.message}
-					<p class="text-sm text-gray-700">{modalStore.message}</p>
+					<p class="modal-message">{modalStore.message}</p>
 				{/if}
 
 				{#if modalStore.type === 'prompt'}
@@ -185,7 +185,7 @@
 						type="text"
 						bind:value={inputValue}
 						placeholder={modalStore.placeholder}
-						class="mt-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						class="pixel-input"
 						onkeydown={(e) => {
 							if (e.key === 'Enter') {
 								handleConfirm();
@@ -193,9 +193,9 @@
 						}}
 					/>
 				{:else if modalStore.type === 'bookmark'}
-					<div class="space-y-3">
-						<div>
-							<label for="bookmark-url" class="block text-sm font-medium text-gray-700 mb-1">
+					<div class="modal-form">
+						<div class="form-field">
+							<label for="bookmark-url" class="form-label">
 								URL
 							</label>
 							<input
@@ -204,7 +204,8 @@
 								type="text"
 								bind:value={bookmarkUrl}
 								placeholder="https://example.com"
-								class="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 {isUrlValid || !urlTouched ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-500' : 'border-red-500 focus:border-red-500 focus:ring-red-500'}"
+								class="pixel-input"
+								class:error={!isUrlValid && urlTouched}
 								oninput={() => { urlTouched = true; }}
 								onblur={() => { urlTouched = true; }}
 								onkeydown={(e) => {
@@ -214,11 +215,11 @@
 								}}
 							/>
 							{#if urlError}
-								<p class="mt-1 text-xs text-red-500">{urlError}</p>
+								<p class="form-error">{urlError}</p>
 							{/if}
 						</div>
-						<div>
-							<label for="bookmark-title" class="block text-sm font-medium text-gray-700 mb-1">
+						<div class="form-field">
+							<label for="bookmark-title" class="form-label">
 								Name
 							</label>
 							<input
@@ -226,7 +227,7 @@
 								type="text"
 								bind:value={bookmarkTitle}
 								placeholder="My Bookmark"
-								class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								class="pixel-input"
 								onkeydown={(e) => {
 									if (e.key === 'Enter' && bookmarkTitle && bookmarkUrl && isUrlValid) {
 										handleConfirm();
@@ -239,11 +240,11 @@
 			</div>
 
 			<!-- Footer -->
-			<div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+			<div class="pixel-modal-footer">
 				{#if modalStore.cancelText}
 					<button
 						onclick={handleCancel}
-						class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+						class="pixel-modal-btn pixel-modal-btn-cancel"
 					>
 						{modalStore.cancelText}
 					</button>
@@ -251,7 +252,7 @@
 				<button
 					onclick={handleConfirm}
 					disabled={modalStore.type === 'bookmark' && (!bookmarkTitle || !bookmarkUrl || !isUrlValid)}
-					class="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+					class="pixel-modal-btn pixel-modal-btn-confirm"
 				>
 					{modalStore.confirmText}
 				</button>
@@ -259,3 +260,152 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.pixel-modal-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(0, 0, 0, 0.75);
+		padding: 16px;
+	}
+
+	.pixel-modal-dialog {
+		width: 100%;
+		max-width: 500px;
+		background-color: var(--bg-surface);
+		border: 6px solid var(--border);
+		box-shadow: 8px 8px 0px var(--shadow);
+	}
+
+	.pixel-modal-header {
+		padding: 16px;
+		background-color: var(--bg-secondary);
+		border-bottom: 4px solid var(--border);
+	}
+
+	.modal-title {
+		font-size: 12px;
+		font-weight: bold;
+		color: var(--text-primary);
+		text-transform: uppercase;
+		margin: 0;
+	}
+
+	.pixel-modal-content {
+		padding: 20px 16px;
+		background-color: var(--bg-surface);
+	}
+
+	.modal-message {
+		font-size: 10px;
+		color: var(--text-primary);
+		line-height: 1.6;
+		margin-bottom: 16px;
+	}
+
+	.pixel-input {
+		width: 100%;
+		padding: 8px 12px;
+		background-color: var(--bg-primary);
+		border: 4px solid var(--border);
+		color: var(--text-primary);
+		font-size: 10px;
+		font-family: 'Press Start 2P', monospace;
+		transition: all 0.1s;
+		box-shadow: inset 2px 2px 0px var(--shadow);
+		margin-top: 12px;
+	}
+
+	/* URL input uses IBM Plex Mono */
+	#bookmark-url {
+		font-family: 'IBM Plex Mono', monospace;
+		font-size: 13px;
+	}
+
+	.pixel-input::placeholder {
+		color: var(--text-secondary);
+	}
+
+	.pixel-input:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+	}
+
+	.pixel-input.error {
+		border-color: #ff6b6b;
+	}
+
+	.modal-form {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.form-field {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.form-label {
+		font-size: 8px;
+		font-weight: bold;
+		color: var(--text-primary);
+		margin-bottom: 4px;
+		text-transform: uppercase;
+	}
+
+	.form-error {
+		font-size: 7px;
+		color: #ff6b6b;
+		margin-top: 4px;
+	}
+
+	.pixel-modal-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 16px;
+		background-color: var(--bg-secondary);
+		border-top: 4px solid var(--border);
+	}
+
+	.pixel-modal-btn {
+		padding: 8px 16px;
+		background-color: var(--bg-surface);
+		border: 4px solid var(--border);
+		color: var(--text-primary);
+		font-size: 8px;
+		font-family: 'Press Start 2P', monospace;
+		text-transform: uppercase;
+		cursor: pointer;
+		transition: all 0.1s;
+		box-shadow: 2px 2px 0px var(--shadow);
+	}
+
+	.pixel-modal-btn:hover:not(:disabled) {
+		transform: translate(-1px, -1px);
+		box-shadow: 3px 3px 0px var(--shadow);
+	}
+
+	.pixel-modal-btn:active:not(:disabled) {
+		transform: translate(1px, 1px);
+		box-shadow: 1px 1px 0px var(--shadow);
+	}
+
+	.pixel-modal-btn-confirm {
+		background-color: var(--accent-primary);
+	}
+
+	.pixel-modal-btn-cancel:hover {
+		background-color: var(--accent-secondary);
+	}
+
+	.pixel-modal-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+</style>

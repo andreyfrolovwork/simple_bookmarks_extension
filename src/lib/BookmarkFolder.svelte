@@ -3,6 +3,7 @@
 	import type { BookmarkItem } from '../types';
 	import Bookmark from './Bookmark.svelte';
 	import Self from './BookmarkFolder.svelte';
+	import Icon from './Icon.svelte';
 	import { deleteBookmark } from './deleteBookmark';
 	import { dragStore } from './dragStore';
 	import { moveBookmark } from './moveBookmark';
@@ -29,12 +30,10 @@
 	let editingFolderId = $state<string | null>(null);
 	let editingFolderTitle = $state('');
 
-	// Check if item is a folder (has children array but no url)
 	function isFolder(item: BookmarkItem): boolean {
 		return Boolean(item.children !== undefined && !item.url);
 	}
 
-	// Group sequential bookmarks for root level
 	type GroupItem = { type: 'folder'; item: BookmarkItem } | { type: 'bookmarks'; items: BookmarkItem[] };
 	
 	const groupedItems = $derived(() => {
@@ -45,10 +44,8 @@
 		
 		for (const child of children) {
 			if (isFolder(child)) {
-				// Folder goes separately
 				groups.push({ type: 'folder', item: child });
 			} else {
-				// Bookmark - add to last bookmark group or create new one
 				const lastGroup = groups[groups.length - 1];
 				if (lastGroup && lastGroup.type === 'bookmarks') {
 					lastGroup.items.push(child);
@@ -61,7 +58,6 @@
 		return groups;
 	});
 
-	// Delete folder handler
 	async function handleDeleteFolder(folderId: string, folderTitle: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -81,7 +77,6 @@
 		}
 	}
 
-	// Get next folder name (folder1, folder2, etc.)
 	async function getNextFolderName(parentFolderId: string): Promise<string> {
 		try {
 			const parentNode = await chrome.bookmarks.getSubTree(parentFolderId);
@@ -102,7 +97,6 @@
 		}
 	}
 
-	// Create new folder with auto-generated name
 	async function handleCreateFolder(parentFolderId: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -123,12 +117,10 @@
 				});
 			});
 			
-			// Start editing immediately
 			editingFolderId = result.id;
 			editingFolderTitle = folderName;
 			onMove?.();
 			
-			// Focus input after render
 			setTimeout(() => {
 				const input = document.querySelector(`[data-folder-edit="${result.id}"]`) as HTMLInputElement;
 				if (input) {
@@ -142,7 +134,6 @@
 		}
 	}
 
-	// Start editing folder
 	function handleStartEditFolder(folderId: string, currentTitle: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -158,7 +149,6 @@
 		}, 100);
 	}
 
-	// Save folder title
 	async function handleSaveFolder(folderId: string, e?: Event) {
 		if (e) {
 			e.preventDefault();
@@ -183,7 +173,6 @@
 		}
 	}
 
-	// Cancel editing
 	function handleCancelEdit(e?: Event) {
 		if (e) {
 			e.preventDefault();
@@ -195,7 +184,6 @@
 		editingFolderTitle = '';
 	}
 
-	// Create new bookmark
 	async function handleCreateBookmark(parentFolderId: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -212,12 +200,8 @@
 		}
 	}
 
-	// Drag and Drop for folders
 	function handleFolderDragStart(folderItem: BookmarkItem, e: DragEvent) {
-		// Stop propagation so parent folders don't intercept the event
 		e.stopPropagation();
-		
-		console.log(`📁 Drag: ${folderItem.title}`);
 		isDraggingFolder = true;
 		dragStore.setDraggedItem(folderItem, item.id);
 		if (e.dataTransfer) {
@@ -227,13 +211,9 @@
 	}
 
 	function handleFolderDragEnd() {
-		console.log('🏁 DragEnd');
 		isDraggingFolder = false;
 		dragStore.clear();
 	}
-
-	let lastLoggedFolder = '';
-	let logCount = 0;
 
 	function handleFolderDragOver(folderItem: BookmarkItem, e: DragEvent) {
 		e.preventDefault();
@@ -244,26 +224,16 @@
 		if (draggedItem && draggedItem.id !== folderItem.id) {
 			dropTargetFolderId = folderItem.id;
 			
-			// Determine drop mode: before, into, or after
 			const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 			const y = e.clientY - rect.top;
 			const height = rect.height;
 			
-			// Top quarter - "before", bottom quarter - "after", middle - "into"
 			if (y < height * 0.25) {
 				dropMode = 'before';
 			} else if (y > height * 0.75) {
 				dropMode = 'after';
 			} else {
 				dropMode = 'into';
-			}
-
-			// Log only once per 10 calls or when folder/mode changes
-			const currentKey = `${folderItem.id}-${dropMode}`;
-			if (lastLoggedFolder !== currentKey) {
-				console.log(`📍 Over: ${folderItem.title} (${dropMode})`);
-				lastLoggedFolder = currentKey;
-				logCount = 0;
 			}
 			
 			if (e.dataTransfer) {
@@ -277,7 +247,6 @@
 		dropMode = null;
 	}
 
-	// Handlers for root drop zone (move to end)
 	function handleRootDragOver(e: DragEvent) {
 		e.preventDefault();
 		const draggedItem = dragStore.item;
@@ -303,8 +272,6 @@
 
 		try {
 			const children = item.children || [];
-			console.log(`✅ Drop: ${draggedItem.title} → end of list`);
-
 			await moveBookmark(draggedItem.id, {
 				parentId: item.id,
 				index: children.length
@@ -319,38 +286,6 @@
 		}
 	}
 
-	// Check for recursion - cannot move folder into itself or its subfolder
-	function isDescendant(parentId: string, childId: string, allItems: BookmarkItem[]): boolean {
-		const findItem = (id: string): BookmarkItem | null => {
-			for (const i of allItems) {
-				if (i.id === id) return i;
-				if (i.children) {
-					const found = findInChildren(i.children, id);
-					if (found) return found;
-				}
-			}
-			return null;
-		};
-		
-		const findInChildren = (children: BookmarkItem[], id: string): BookmarkItem | null => {
-			for (const child of children) {
-				if (child.id === id) return child;
-				if (child.children) {
-					const found = findInChildren(child.children, id);
-					if (found) return found;
-				}
-			}
-			return null;
-		};
-		
-		let current = findItem(childId);
-		while (current && current.parentId) {
-			if (current.parentId === parentId) return true;
-			current = findItem(current.parentId);
-		}
-		return false;
-	}
-
 	async function handleFolderDrop(targetFolder: BookmarkItem, e: DragEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -362,20 +297,15 @@
 		const draggedItem = dragStore.item;
 		const draggedFromParentId = dragStore.parentId;
 		
-		console.log(`🎯 Drop started: ${draggedItem?.title} → ${targetFolder.title} (${currentDropMode})`);
-		
 		if (!draggedItem || draggedItem.id === targetFolder.id) {
-			console.log('⚠️ Cancelled: same item');
 			return;
 		}
 
-		// Protection against recursion for folders
 		if (currentDropMode === 'into' && isFolder(draggedItem)) {
 			if (draggedItem.id === targetFolder.id || draggedItem.id === targetFolder.parentId) {
 				await modalStore.alert('Cannot move folder into itself', 'Invalid Operation');
 				return;
 			}
-			// Additional check via API
 			try {
 				const draggedTree = await chrome.bookmarks.getSubTree(draggedItem.id);
 				const checkDescendant = (node: chrome.bookmarks.BookmarkTreeNode): boolean => {
@@ -398,14 +328,11 @@
 			let destination: { parentId: string; index: number };
 
 			if (currentDropMode === 'into') {
-				// Insert into folder
 				destination = {
 					parentId: targetFolder.id,
 					index: 0
 				};
 			} else {
-				// Insert before or after folder - need to find its parent
-				// Get target folder information
 				const targetFolderInfo = await chrome.bookmarks.get(targetFolder.id);
 				const targetParentId = targetFolderInfo[0]?.parentId;
 				
@@ -413,7 +340,6 @@
 					throw new Error('Failed to determine parent folder');
 				}
 
-				// Get siblings from target folder's parent
 				const parentNode = await chrome.bookmarks.getSubTree(targetParentId);
 				const siblings = parentNode[0]?.children || [];
 				let targetIndex = siblings.findIndex((s: chrome.bookmarks.BookmarkTreeNode) => s.id === targetFolder.id);
@@ -422,7 +348,6 @@
 					targetIndex++;
 				}
 
-				// Adjust if moving within same folder
 				if (draggedFromParentId === targetParentId) {
 					const draggedIndex = siblings.findIndex((s: chrome.bookmarks.BookmarkTreeNode) => s.id === draggedItem.id);
 					if (draggedIndex !== -1 && draggedIndex < targetIndex) {
@@ -436,7 +361,6 @@
 				};
 			}
 
-			console.log(`✅ Drop: ${draggedItem.title} → ${targetFolder.title} (${currentDropMode})`);
 			await moveBookmark(draggedItem.id, destination);
 			
 			setTimeout(() => {
@@ -452,7 +376,7 @@
 {#if level === 0}
 	<!-- Root level - horizontal list -->
 	<div 
-		class="flex h-full w-full gap-3 overflow-x-scroll p-4"
+		class="pixel-root-container"
 		role="region"
 		ondragover={handleRootDragOver}
 		ondragleave={handleRootDragLeave}
@@ -462,7 +386,9 @@
 			{#if group.type === 'folder'}
 				<!-- Folder -->
 				<div 
-					class="group relative flex shrink-0 self-start flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all duration-200 ease-out {isDraggingFolder && dragStore.item?.id === group.item.id ? 'opacity-30 scale-95 cursor-grabbing' : 'opacity-100 scale-100'} {dropTargetFolderId === group.item.id && dropMode === 'into' ? 'border-blue-500 bg-blue-50 border-2 scale-105 shadow-lg' : ''}"
+					class="pixel-folder"
+					class:dragging={isDraggingFolder && dragStore.item?.id === group.item.id}
+					class:drop-into={dropTargetFolderId === group.item.id && dropMode === 'into'}
 					draggable="true"
 					role="button"
 					tabindex="0"
@@ -473,49 +399,23 @@
 					ondrop={(e) => handleFolderDrop(group.item, e)}
 					title={group.item.title}
 				>
-					<!-- "Insert before" indicator -->
 					{#if dropTargetFolderId === group.item.id && dropMode === 'before'}
-						<div 
-							class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
-							transition:scale={{ duration: 200 }}
-						></div>
+						<div class="drop-indicator-before" transition:scale={{ duration: 200 }}></div>
 					{/if}
-					<!-- "Insert after" indicator -->
 					{#if dropTargetFolderId === group.item.id && dropMode === 'after'}
-						<div 
-							class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
-							transition:scale={{ duration: 200 }}
-						></div>
+						<div class="drop-indicator-after" transition:scale={{ duration: 200 }}></div>
 					{/if}
-					<div 
-						class="flex items-center gap-2"
-						role="region"
-						ondragover={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							handleFolderDragOver(group.item, e);
-						}}
-						ondrop={(e) => handleFolderDrop(group.item, e)}
-					>
-						<svg
-							class="size-4 shrink-0 text-gray-500"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-							/>
-						</svg>
+					
+					<div class="folder-header">
+						<span class="folder-icon">
+							<Icon name="folder" size={16} />
+						</span>
 						{#if editingFolderId === group.item.id}
 							<input
 								data-folder-edit={group.item.id}
 								type="text"
 								bind:value={editingFolderTitle}
-								class="flex-1 rounded border border-blue-500 px-2 py-1 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								class="folder-input"
 								onkeydown={(e) => {
 									if (e.key === 'Enter') {
 										handleSaveFolder(group.item.id, e);
@@ -526,154 +426,119 @@
 								onclick={(e) => e.stopPropagation()}
 							/>
 						{:else}
-							<h3 class="text-sm font-semibold text-gray-800">{group.item.title}</h3>
+							<h3 class="folder-title">{group.item.title}</h3>
 						{/if}
 					</div>
-					<div 
-						role="region"
-						class="relative"
-						ondragover={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							handleFolderDragOver(group.item, e);
-						}}
-						ondrop={(e) => handleFolderDrop(group.item, e)}
-					>
+					
+					<div class="folder-content">
 						{#if group.item.children?.length}
 							<Self item={group.item} level={1} {onDelete} {onMove} />
-							<!-- Add bookmark button inside folder with content -->
-
 						{:else}
-							<!-- Empty folder state -->
-							<div class="relative z-10 flex min-h-[20px] flex-col items-center justify-center gap-2 rounded">
-								<p class="text-xs text-gray-400">Empty folder</p>
-							</div>
+							<div class="folder-empty">Empty</div>
 						{/if}
 					</div>
-					<!-- Folder control buttons -->
-					<div class="absolute -top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+					
+					<div class="folder-actions">
 						{#if editingFolderId === group.item.id}
 							<button
 								onclick={(e) => handleSaveFolder(group.item.id, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
+								class="pixel-action-btn"
 								title="Save"
 							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-								</svg>
+								<Icon name="check" size={12} />
 							</button>
 						{:else}
 							<button
 								onclick={(e) => handleCreateBookmark(group.item.id, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
+								class="pixel-action-btn"
 								title="Add bookmark"
 							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-								</svg>
+								<Icon name="add" size={12} />
 							</button>
 							<button
 								onclick={(e) => handleCreateFolder(group.item.id, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
+								class="pixel-action-btn"
 								title="Add folder"
 							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-								</svg>
+								<Icon name="folder" size={12} />
 							</button>
 							<button
 								onclick={(e) => handleStartEditFolder(group.item.id, group.item.title, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
-								title="Edit folder"
+								class="pixel-action-btn"
+								title="Edit"
 							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-								</svg>
+								<Icon name="edit" size={12} />
 							</button>
 							<button
 								onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
-								title="Delete folder"
+								class="pixel-action-btn pixel-action-danger"
+								title="Delete"
 							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-								</svg>
+								<Icon name="trash" size={12} />
 							</button>
 						{/if}
 					</div>
 				</div>
 			{:else}
 				<!-- Bookmark group -->
-				<div class="flex shrink-0 flex-col gap-2">
+				<div class="pixel-bookmark-group">
 					{#each group.items as bookmark (bookmark.id)}
 						<div transition:fly={{ y: 10, duration: 300 }}>
 							<Bookmark item={bookmark} parentId={item.id} {onDelete} {onMove} />
 						</div>
 					{/each}
-					<!-- Add bookmark button at end of group -->
 					<button
 						onclick={(e) => {
 							e.preventDefault();
 							handleCreateBookmark(item.id, e);
 						}}
-						class="flex size-10 items-center justify-center self-start rounded-full border-2 border-dashed border-gray-300 bg-white text-gray-400 shadow-sm transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-500 hover:shadow-md"
+						class="pixel-add-btn"
 						title="Add bookmark"
 					>
-						<svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-						</svg>
+						<Icon name="add" size={20} />
 					</button>
 				</div>
 			{/if}
 		{/each}
 		
-		<!-- Add bookmark and folder buttons on root level -->
-		<div class="flex shrink-0 items-start gap-3">
+		<div class="pixel-create-buttons">
 			<button
 				onclick={(e) => {
 					e.preventDefault();
 					handleCreateBookmark(item.id, e);
 				}}
-				class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-				title="Create bookmark"
+				class="pixel-button"
 			>
-				<svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-				</svg>
-				Create Bookmark
+				<Icon name="bookmark" size={16} />
+				<span>Create Bookmark</span>
 			</button>
 			<button
 				onclick={(e) => {
 					e.preventDefault();
 					handleCreateFolder(item.id, e);
 				}}
-				class="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-				title="Create folder"
+				class="pixel-button pixel-button-primary"
 			>
-				<svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-				</svg>
-				Create Folder
+				<Icon name="folder" size={16} />
+				<span>Create Folder</span>
 			</button>
 		</div>
 		
-		<!-- Drop zone to move to the end of root level -->
 		{#if isRootDropZone}
-			<div 
-				class="flex h-full min-w-[100px] shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-blue-500 bg-blue-50 px-4"
-				transition:scale={{ duration: 200 }}
-			>
-				<span class="text-sm text-blue-600">Move here</span>
+			<div class="pixel-drop-zone" transition:scale={{ duration: 200 }}>
+				Move here
 			</div>
 		{/if}
 	</div>
 {:else}
 	<!-- Nested levels - vertical list -->
-	<div class="flex flex-col gap-2">
+	<div class="pixel-nested-container">
 		{#each item.children || [] as child (child.id)}
 			{#if isFolder(child)}
 				<div 
-					class="group relative flex flex-col gap-2 border-l-2 pl-3 transition-all duration-200 ease-out {isDraggingFolder && dragStore.item?.id === child.id ? 'opacity-30 scale-95 cursor-grabbing' : 'opacity-100 scale-100'} {dropTargetFolderId === child.id && dropMode === 'into' ? 'border-blue-500 bg-blue-50 scale-105 shadow-lg' : 'border-gray-200 hover:border-blue-400 [.group:hover:not(:has(.group:hover))>&]:border-gray-400'}"
+					class="pixel-nested-folder"
+					class:dragging={isDraggingFolder && dragStore.item?.id === child.id}
+					class:drop-into={dropTargetFolderId === child.id && dropMode === 'into'}
 					draggable="true"
 					role="button"
 					tabindex="0"
@@ -684,49 +549,23 @@
 					ondrop={(e) => handleFolderDrop(child, e)}
 					title={child.title}
 				>
-					<!-- "Insert before" indicator -->
 					{#if dropTargetFolderId === child.id && dropMode === 'before'}
-						<div 
-							class="absolute -top-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
-							transition:scale={{ duration: 200 }}
-						></div>
+						<div class="drop-indicator-before" transition:scale={{ duration: 200 }}></div>
 					{/if}
-					<!-- "Insert after" indicator -->
 					{#if dropTargetFolderId === child.id && dropMode === 'after'}
-						<div 
-							class="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 z-20"
-							transition:scale={{ duration: 200 }}
-						></div>
+						<div class="drop-indicator-after" transition:scale={{ duration: 200 }}></div>
 					{/if}
-					<div 
-						class="flex items-center gap-2"
-						role="region"
-						ondragover={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							handleFolderDragOver(child, e);
-						}}
-						ondrop={(e) => handleFolderDrop(child, e)}
-					>
-						<svg
-							class="size-4 shrink-0 text-gray-500"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-							/>
-						</svg>
+					
+					<div class="nested-folder-header">
+						<span class="folder-icon">
+							<Icon name="folder" size={14} />
+						</span>
 						{#if editingFolderId === child.id}
 							<input
 								data-folder-edit={child.id}
 								type="text"
 								bind:value={editingFolderTitle}
-								class="flex-1 rounded border border-blue-500 px-2 py-1 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								class="folder-input"
 								onkeydown={(e) => {
 									if (e.key === 'Enter') {
 										handleSaveFolder(child.id, e);
@@ -737,91 +576,68 @@
 								onclick={(e) => e.stopPropagation()}
 							/>
 						{:else}
-							<h3 class="text-sm font-semibold text-gray-800">{child.title}</h3>
+							<h3 class="folder-title">{child.title}</h3>
 						{/if}
-						<div class="ml-auto flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 [.group:not(:hover)_&]:!opacity-0">
+						
+						<div class="nested-folder-actions">
 							{#if editingFolderId === child.id}
 								<button
 									onclick={(e) => handleSaveFolder(child.id, e)}
-									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
+									class="pixel-action-btn-small"
 									title="Save"
 								>
-									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-									</svg>
+									<Icon name="check" size={10} />
 								</button>
 							{:else}
 								<button
 									onclick={(e) => handleCreateBookmark(child.id, e)}
-									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
+									class="pixel-action-btn-small"
 									title="Add bookmark"
 								>
-									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-									</svg>
+									<Icon name="add" size={10} />
 								</button>
 								<button
 									onclick={(e) => handleCreateFolder(child.id, e)}
-									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
+									class="pixel-action-btn-small"
 									title="Add folder"
 								>
-									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-									</svg>
+									<Icon name="folder" size={10} />
 								</button>
 								<button
 									onclick={(e) => handleStartEditFolder(child.id, child.title, e)}
-									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
-									title="Edit folder"
+									class="pixel-action-btn-small"
+									title="Edit"
 								>
-									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-									</svg>
+									<Icon name="edit" size={10} />
 								</button>
 								<button
 									onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
-									class="flex size-4 items-center justify-center rounded-full bg-gray-400 text-white shadow-sm transition-all hover:bg-gray-500 hover:shadow-md"
-									title="Delete folder"
+									class="pixel-action-btn-small pixel-action-danger"
+									title="Delete"
 								>
-									<svg class="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-									</svg>
+									<Icon name="trash" size={10} />
 								</button>
 							{/if}
 						</div>
 					</div>
-					<div
-						role="region"
-						class="relative"
-						ondragover={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							handleFolderDragOver(child, e);
-						}}
-						ondrop={(e) => handleFolderDrop(child, e)}
-					>
+					
+					<div class="nested-folder-content">
 						{#if child.children?.length}
 							<Self item={child} level={level + 1} {onDelete} {onMove} />
-							<!-- Add bookmark button inside nested folder with content -->
-							<div class="mt-1 flex">
+							<div class="nested-add-bookmark">
 								<button
 									onclick={(e) => {
 										e.stopPropagation();
 										handleCreateBookmark(child.id, e);
 									}}
-									class="flex size-5 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white text-gray-400 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-500"
+									class="pixel-add-btn-small"
 									title="Add bookmark"
 								>
-									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-									</svg>
+									<Icon name="add" size={14} />
 								</button>
 							</div>
 						{:else}
-							<!-- Empty folder state -->
-							<div class="relative z-10 flex items-center gap-2 py-2 pl-1">
-								<p class="text-xs text-gray-400">Empty</p>
-							</div>
+							<div class="folder-empty-nested">Empty</div>
 						{/if}
 					</div>
 				</div>
@@ -834,3 +650,346 @@
 	</div>
 {/if}
 
+<style>
+	/* Root container */
+	.pixel-root-container {
+		display: flex;
+		height: 100%;
+		width: 100%;
+		gap: 12px;
+		overflow-x: scroll;
+		padding: 16px;
+		background-color: var(--bg-primary);
+	}
+
+	/* Folder styles */
+	.pixel-folder {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		flex-shrink: 0;
+		align-self: flex-start;
+		padding: 12px;
+		background-color: var(--bg-surface);
+		border: 4px solid var(--border);
+		box-shadow: 4px 4px 0px var(--shadow);
+		transition: transform 0.1s steps(2), box-shadow 0.1s, opacity 0.2s;
+		min-width: 200px;
+	}
+
+	.pixel-folder:hover {
+		transform: translate(-2px, -2px);
+		box-shadow: 6px 6px 0px var(--shadow);
+	}
+
+	.pixel-folder.dragging {
+		opacity: 0.3;
+		transform: scale(0.95);
+	}
+
+	.pixel-folder.drop-into {
+		background-color: var(--accent-primary);
+		border-color: var(--accent-primary);
+		transform: scale(1.05);
+		box-shadow: 6px 6px 0px var(--shadow);
+	}
+
+	/* Folder header */
+	.folder-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.folder-icon {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		color: var(--text-primary);
+	}
+
+	.folder-title {
+		font-size: 10px;
+		font-weight: bold;
+		color: var(--text-primary);
+		margin: 0;
+	}
+
+	.folder-input {
+		flex: 1;
+		background-color: var(--bg-surface);
+		border: 2px solid var(--accent-primary);
+		color: var(--text-primary);
+		padding: 4px 8px;
+		font-size: 10px;
+		font-family: 'Press Start 2P', monospace;
+	}
+
+	.folder-input:focus {
+		outline: none;
+		box-shadow: inset 2px 2px 0px var(--shadow);
+	}
+
+	/* Folder content */
+	.folder-content {
+		position: relative;
+	}
+
+	.folder-empty {
+		padding: 8px;
+		text-align: center;
+		font-size: 8px;
+		color: var(--text-secondary);
+	}
+
+	/* Folder actions */
+	.folder-actions {
+		position: absolute;
+		top: -8px;
+		right: 8px;
+		display: flex;
+		gap: 4px;
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
+
+	.pixel-folder:hover .folder-actions {
+		opacity: 1;
+	}
+
+	.pixel-action-btn {
+		width: 24px;
+		height: 24px;
+		background-color: var(--bg-secondary);
+		border: 2px solid var(--border);
+		color: var(--text-primary);
+		font-size: 12px;
+		cursor: pointer;
+		transition: transform 0.1s steps(2), box-shadow 0.1s;
+		box-shadow: 2px 2px 0px var(--shadow);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pixel-action-btn:hover {
+		transform: translate(-1px, -1px);
+		box-shadow: 3px 3px 0px var(--shadow);
+		background-color: var(--accent-secondary);
+	}
+
+	.pixel-action-btn:active {
+		transform: translate(1px, 1px);
+		box-shadow: 1px 1px 0px var(--shadow);
+	}
+
+	.pixel-action-danger:hover {
+		background-color: #ff6b6b;
+	}
+
+	/* Bookmark group */
+	.pixel-bookmark-group {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		flex-shrink: 0;
+	}
+
+	.pixel-add-btn {
+		width: 40px;
+		height: 40px;
+		background-color: var(--bg-surface);
+		border: 4px dashed var(--border);
+		color: var(--text-secondary);
+		font-size: 20px;
+		cursor: pointer;
+		transition: all 0.1s;
+		align-self: flex-start;
+	}
+
+	.pixel-add-btn:hover {
+		background-color: var(--accent-secondary);
+		border-color: var(--accent-primary);
+		border-style: solid;
+		color: var(--text-primary);
+	}
+
+	/* Create buttons */
+	.pixel-create-buttons {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		flex-shrink: 0;
+		align-self: flex-start;
+	}
+
+	.pixel-button {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 12px 16px;
+		background-color: var(--bg-surface);
+		border: 4px solid var(--border);
+		color: var(--text-primary);
+		font-size: 10px;
+		cursor: pointer;
+		transition: transform 0.1s steps(2), box-shadow 0.1s;
+		box-shadow: 4px 4px 0px var(--shadow);
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	.pixel-button:hover {
+		transform: translate(-2px, -2px);
+		box-shadow: 6px 6px 0px var(--shadow);
+	}
+
+	.pixel-button:active {
+		transform: translate(2px, 2px);
+		box-shadow: 2px 2px 0px var(--shadow);
+	}
+
+	.pixel-button-primary {
+		background-color: var(--accent-primary);
+	}
+
+	/* Drop zone */
+	.pixel-drop-zone {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 100px;
+		height: 100%;
+		flex-shrink: 0;
+		border: 4px dashed var(--accent-primary);
+		background-color: var(--bg-secondary);
+		padding: 16px;
+		font-size: 10px;
+		color: var(--accent-primary);
+		text-transform: uppercase;
+	}
+
+	/* Drop indicators */
+	.drop-indicator-before,
+	.drop-indicator-after {
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 2px;
+		background-color: var(--accent-primary);
+		z-index: 20;
+		box-shadow: 0 0 4px var(--accent-primary);
+	}
+
+	.drop-indicator-before {
+		top: -2px;
+	}
+
+	.drop-indicator-after {
+		bottom: -2px;
+	}
+
+	/* Nested styles */
+	.pixel-nested-container {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.pixel-nested-folder {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		border-left: 4px solid var(--border);
+		padding-left: 12px;
+		transition: all 0.1s;
+	}
+
+	.pixel-nested-folder:hover {
+		border-color: var(--accent-secondary);
+	}
+
+	.pixel-nested-folder.dragging {
+		opacity: 0.3;
+		transform: scale(0.95);
+	}
+
+	.pixel-nested-folder.drop-into {
+		background-color: var(--bg-secondary);
+		border-color: var(--accent-primary);
+		transform: scale(1.05);
+	}
+
+	.nested-folder-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.nested-folder-actions {
+		display: flex;
+		gap: 4px;
+		margin-left: auto;
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
+
+	.pixel-nested-folder:hover .nested-folder-actions {
+		opacity: 1;
+	}
+
+	.pixel-action-btn-small {
+		width: 16px;
+		height: 16px;
+		background-color: var(--bg-secondary);
+		border: 2px solid var(--border);
+		color: var(--text-primary);
+		font-size: 10px;
+		cursor: pointer;
+		transition: all 0.1s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pixel-action-btn-small:hover {
+		background-color: var(--accent-secondary);
+		transform: translate(-1px, -1px);
+		box-shadow: 2px 2px 0px var(--shadow);
+	}
+
+	.nested-folder-content {
+		position: relative;
+	}
+
+	.folder-empty-nested {
+		padding: 4px 8px;
+		font-size: 8px;
+		color: var(--text-secondary);
+	}
+
+	.nested-add-bookmark {
+		margin-top: 4px;
+		display: flex;
+	}
+
+	.pixel-add-btn-small {
+		width: 24px;
+		height: 24px;
+		background-color: var(--bg-surface);
+		border: 2px dashed var(--border);
+		color: var(--text-secondary);
+		font-size: 14px;
+		cursor: pointer;
+		transition: all 0.1s;
+	}
+
+	.pixel-add-btn-small:hover {
+		background-color: var(--accent-secondary);
+		border-style: solid;
+		border-color: var(--accent-primary);
+		color: var(--text-primary);
+	}
+</style>

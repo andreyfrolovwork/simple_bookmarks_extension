@@ -51,14 +51,11 @@
 	async function handleCreateBookmark(e: MouseEvent) {
 		e.preventDefault();
 		
-		const url = await modalStore.prompt('Enter bookmark URL:');
-		if (!url) return;
-
-		const title = await modalStore.prompt('Enter bookmark name:', url);
-		if (!title) return;
+		const data = await modalStore.bookmarkPrompt();
+		if (!data) return;
 
 		try {
-			await createBookmark(activeBookmarks?.id || '1', title, url);
+			await createBookmark(activeBookmarks?.id || '1', data.title, data.url || '');
 			onMove?.();
 		} catch (error) {
 			console.error('❌ Error creating bookmark:', error);

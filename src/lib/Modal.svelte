@@ -1,8 +1,12 @@
 <script lang="ts">
+	import { fade, scale } from 'svelte/transition';
 	import { modalStore } from './modalStore.svelte';
 
 	let inputValue = $state('');
+	let bookmarkUrl = $state('');
+	let bookmarkTitle = $state('');
 	let inputElement: HTMLInputElement | undefined = $state();
+	let urlInputElement: HTMLInputElement | undefined = $state();
 
 	$effect(() => {
 		if (modalStore.isOpen && modalStore.type === 'prompt') {
@@ -10,20 +14,37 @@
 			// Focus input after it's rendered
 			setTimeout(() => {
 				inputElement?.focus();
-			}, 0);
+			}, 100);
+		} else if (modalStore.isOpen && modalStore.type === 'bookmark') {
+			bookmarkUrl = '';
+			bookmarkTitle = '';
+			// Focus URL input after it's rendered
+			setTimeout(() => {
+				urlInputElement?.focus();
+			}, 100);
 		}
 	});
 
 	function handleConfirm() {
 		if (modalStore.type === 'prompt') {
 			modalStore.close(inputValue);
+		} else if (modalStore.type === 'bookmark') {
+			if (bookmarkTitle) {
+				modalStore.close({ url: bookmarkUrl || '', title: bookmarkTitle });
+			}
 		} else {
 			modalStore.close(true);
 		}
 	}
 
 	function handleCancel() {
-		modalStore.close(modalStore.type === 'prompt' ? null : false);
+		if (modalStore.type === 'prompt') {
+			modalStore.close(null);
+		} else if (modalStore.type === 'bookmark') {
+			modalStore.close(null);
+		} else {
+			modalStore.close(false);
+		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -49,8 +70,13 @@
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
+		transition:fade={{ duration: 200 }}
 	>
-		<div class="w-full max-w-md rounded-lg bg-white shadow-xl">
+		<div 
+			class="w-full max-w-md rounded-lg bg-white shadow-xl"
+			transition:scale={{ duration: 200, start: 0.95 }}
+			onclick={(e) => e.stopPropagation()}
+		>
 			<!-- Header -->
 			<div class="border-b border-gray-200 px-6 py-4">
 				<h3 class="text-lg font-semibold text-gray-900">{modalStore.title}</h3>
@@ -58,7 +84,9 @@
 
 			<!-- Content -->
 			<div class="px-6 py-4">
-				<p class="text-sm text-gray-700">{modalStore.message}</p>
+				{#if modalStore.message}
+					<p class="text-sm text-gray-700">{modalStore.message}</p>
+				{/if}
 
 				{#if modalStore.type === 'prompt'}
 					<input
@@ -73,6 +101,39 @@
 							}
 						}}
 					/>
+				{:else if modalStore.type === 'bookmark'}
+					<div class="space-y-3">
+						<div>
+							<label for="bookmark-url" class="block text-sm font-medium text-gray-700 mb-1">
+								URL
+							</label>
+							<input
+								bind:this={urlInputElement}
+								id="bookmark-url"
+								type="text"
+								bind:value={bookmarkUrl}
+								placeholder="https://example.com"
+								class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+							/>
+						</div>
+						<div>
+							<label for="bookmark-title" class="block text-sm font-medium text-gray-700 mb-1">
+								Name
+							</label>
+							<input
+								id="bookmark-title"
+								type="text"
+								bind:value={bookmarkTitle}
+								placeholder="My Bookmark"
+								class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								onkeydown={(e) => {
+									if (e.key === 'Enter' && bookmarkTitle) {
+										handleConfirm();
+									}
+								}}
+							/>
+						</div>
+					</div>
 				{/if}
 			</div>
 
@@ -88,7 +149,8 @@
 				{/if}
 				<button
 					onclick={handleConfirm}
-					class="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+					disabled={modalStore.type === 'bookmark' && !bookmarkTitle}
+					class="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{modalStore.confirmText}
 				</button>

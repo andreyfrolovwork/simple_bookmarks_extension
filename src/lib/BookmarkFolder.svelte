@@ -6,6 +6,7 @@
 	import { dragStore } from './dragStore';
 	import { moveBookmark } from './moveBookmark';
 	import { createBookmark } from './createBookmark';
+	import { updateBookmark } from './updateBookmark';
 	import { modalStore } from './modalStore.svelte';
 
 	let { 
@@ -24,10 +25,12 @@
 	let dropTargetFolderId = $state<string | null>(null);
 	let dropMode: 'into' | 'before' | 'after' | null = $state(null);
 	let isRootDropZone = $state(false);
+	let editingFolderId = $state<string | null>(null);
+	let editingFolderTitle = $state('');
 
-	// Check if item is a folder (has children but no url)
+	// Check if item is a folder (has children array but no url)
 	function isFolder(item: BookmarkItem): boolean {
-		return Boolean(item.children && item.children.length > 0 && !item.url);
+		return Boolean(item.children !== undefined && !item.url);
 	}
 
 	// Group sequential bookmarks for root level
@@ -77,21 +80,118 @@
 		}
 	}
 
-	// Create new folder
+	// Get next folder name (folder1, folder2, etc.)
+	async function getNextFolderName(parentFolderId: string): Promise<string> {
+		try {
+			const parentNode = await chrome.bookmarks.getSubTree(parentFolderId);
+			const children = parentNode[0]?.children || [];
+			const folders = children.filter((child: chrome.bookmarks.BookmarkTreeNode) => !child.url);
+			const folderNames = folders.map((f: chrome.bookmarks.BookmarkTreeNode) => f.title);
+			
+			let counter = 1;
+			let folderName = `folder${counter}`;
+			while (folderNames.includes(folderName)) {
+				counter++;
+				folderName = `folder${counter}`;
+			}
+			return folderName;
+		} catch (error) {
+			console.error('❌ Error getting folder name:', error);
+			return 'folder1';
+		}
+	}
+
+	// Create new folder with auto-generated name
 	async function handleCreateFolder(parentFolderId: string, e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		
-		const title = await modalStore.prompt('Enter folder name:');
-		if (!title) return;
+		const folderName = await getNextFolderName(parentFolderId);
 
 		try {
-			await createBookmark(parentFolderId, title);
+			const result = await new Promise<chrome.bookmarks.BookmarkTreeNode>((resolve, reject) => {
+				chrome.bookmarks.create({
+					parentId: parentFolderId,
+					title: folderName
+				}, (bookmark) => {
+					if (chrome.runtime.lastError) {
+						reject(new Error(chrome.runtime.lastError.message));
+					} else {
+						resolve(bookmark);
+					}
+				});
+			});
+			
+			// Start editing immediately
+			editingFolderId = result.id;
+			editingFolderTitle = folderName;
 			onMove?.();
+			
+			// Focus input after render
+			setTimeout(() => {
+				const input = document.querySelector(`[data-folder-edit="${result.id}"]`) as HTMLInputElement;
+				if (input) {
+					input.focus();
+					input.select();
+				}
+			}, 100);
 		} catch (error) {
 			console.error('❌ Error creating folder:', error);
 			await modalStore.alert('Failed to create folder', 'Error');
 		}
+	}
+
+	// Start editing folder
+	function handleStartEditFolder(folderId: string, currentTitle: string, e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		editingFolderId = folderId;
+		editingFolderTitle = currentTitle;
+		
+		setTimeout(() => {
+			const input = document.querySelector(`[data-folder-edit="${folderId}"]`) as HTMLInputElement;
+			if (input) {
+				input.focus();
+				input.select();
+			}
+		}, 100);
+	}
+
+	// Save folder title
+	async function handleSaveFolder(folderId: string, e?: Event) {
+		if (e) {
+			e.preventDefault();
+			if ('stopPropagation' in e) {
+				e.stopPropagation();
+			}
+		}
+		
+		if (!editingFolderTitle.trim()) {
+			await modalStore.alert('Folder name cannot be empty', 'Error');
+			return;
+		}
+
+		try {
+			await updateBookmark(folderId, { title: editingFolderTitle.trim() });
+			editingFolderId = null;
+			editingFolderTitle = '';
+			onMove?.();
+		} catch (error) {
+			console.error('❌ Error updating folder:', error);
+			await modalStore.alert('Failed to update folder', 'Error');
+		}
+	}
+
+	// Cancel editing
+	function handleCancelEdit(e?: Event) {
+		if (e) {
+			e.preventDefault();
+			if ('stopPropagation' in e) {
+				e.stopPropagation();
+			}
+		}
+		editingFolderId = null;
+		editingFolderTitle = '';
 	}
 
 	// Create new bookmark
@@ -99,14 +199,11 @@
 		e.preventDefault();
 		e.stopPropagation();
 		
-		const url = await modalStore.prompt('Enter bookmark URL:');
-		if (!url) return;
-
-		const title = await modalStore.prompt('Enter bookmark name:', url);
-		if (!title) return;
+		const data = await modalStore.bookmarkPrompt();
+		if (!data) return;
 
 		try {
-			await createBookmark(parentFolderId, title, url);
+			await createBookmark(parentFolderId, data.title, data.url || '');
 			onMove?.();
 		} catch (error) {
 			console.error('❌ Error creating bookmark:', error);
@@ -406,10 +503,28 @@
 								d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
 							/>
 						</svg>
-						<h3 class="text-sm font-semibold text-gray-800">{group.item.title}</h3>
+						{#if editingFolderId === group.item.id}
+							<input
+								data-folder-edit={group.item.id}
+								type="text"
+								bind:value={editingFolderTitle}
+								class="flex-1 rounded border border-blue-500 px-2 py-1 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										handleSaveFolder(group.item.id, e);
+									} else if (e.key === 'Escape') {
+										handleCancelEdit(e);
+									}
+								}}
+								onclick={(e) => e.stopPropagation()}
+							/>
+						{:else}
+							<h3 class="text-sm font-semibold text-gray-800">{group.item.title}</h3>
+						{/if}
 					</div>
 					<div 
 						role="region"
+						class="relative"
 						ondragover={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -417,45 +532,80 @@
 						}}
 						ondrop={(e) => handleFolderDrop(group.item, e)}
 					>
-						{#if group.item.children && group.item.children.length > 0}
+						{#if group.item.children?.length}
 							<Self item={group.item} level={1} {onDelete} {onMove} />
+							<!-- Add bookmark button inside folder with content -->
+							<div class="mt-2 flex justify-center">
+								<button
+									onclick={(e) => {
+										e.stopPropagation();
+										handleCreateBookmark(group.item.id, e);
+									}}
+									class="flex size-7 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white text-gray-400 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-500"
+									title="Add bookmark"
+								>
+									<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+									</svg>
+								</button>
+							</div>
 						{:else}
 							<!-- Empty folder state -->
-							<div class="py-4 text-center text-xs text-gray-400 italic">
-								<p>Empty folder</p>
-								<p class="mt-1">Drag items here or use buttons above</p>
+							<div class="relative z-10 flex min-h-[20px] flex-col items-center justify-center gap-2 rounded">
+								<p class="text-xs text-gray-400">Empty folder</p>
 							</div>
 						{/if}
 					</div>
 					<!-- Folder control buttons -->
-					<div class="absolute -top-1 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-						<button
-							onclick={(e) => handleCreateBookmark(group.item.id, e)}
-							class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-							title="Add bookmark"
-						>
-							<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-							</svg>
-						</button>
-						<button
-							onclick={(e) => handleCreateFolder(group.item.id, e)}
-							class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-							title="Add folder"
-						>
-							<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6" />
-							</svg>
-						</button>
-						<button
-							onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
-							class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-							title="Delete folder"
-						>
-							<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-							</svg>
-						</button>
+					<div class="absolute -top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+						{#if editingFolderId === group.item.id}
+							<button
+								onclick={(e) => handleSaveFolder(group.item.id, e)}
+								class="flex size-6 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+								title="Save"
+							>
+								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+								</svg>
+							</button>
+						{:else}
+							<button
+								onclick={(e) => handleCreateBookmark(group.item.id, e)}
+								class="flex size-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:shadow-md"
+								title="Add bookmark"
+							>
+								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+								</svg>
+							</button>
+							<button
+								onclick={(e) => handleCreateFolder(group.item.id, e)}
+								class="flex size-6 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+								title="Add folder"
+							>
+								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+								</svg>
+							</button>
+							<button
+								onclick={(e) => handleStartEditFolder(group.item.id, group.item.title, e)}
+								class="flex size-6 items-center justify-center rounded-full bg-yellow-500 text-white shadow-sm transition-all hover:bg-yellow-600 hover:shadow-md"
+								title="Edit folder"
+							>
+								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+								</svg>
+							</button>
+							<button
+								onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
+								class="flex size-6 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md"
+								title="Delete folder"
+							>
+								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						{/if}
 					</div>
 				</div>
 			{:else}
@@ -464,9 +614,52 @@
 					{#each group.items as bookmark (bookmark.id)}
 						<Bookmark item={bookmark} parentId={item.id} {onDelete} {onMove} />
 					{/each}
+					<!-- Add bookmark button at end of group -->
+					<button
+						onclick={(e) => {
+							e.preventDefault();
+							handleCreateBookmark(item.id, e);
+						}}
+						class="flex size-10 items-center justify-center self-start rounded-full border-2 border-dashed border-gray-300 bg-white text-gray-400 shadow-sm transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-500 hover:shadow-md"
+						title="Add bookmark"
+					>
+						<svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+						</svg>
+					</button>
 				</div>
 			{/if}
 		{/each}
+		
+		<!-- Add bookmark and folder buttons on root level -->
+		<div class="flex shrink-0 items-start gap-3">
+			<button
+				onclick={(e) => {
+					e.preventDefault();
+					handleCreateBookmark(item.id, e);
+				}}
+				class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+				title="Create bookmark"
+			>
+				<svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+				</svg>
+				Create Bookmark
+			</button>
+			<button
+				onclick={(e) => {
+					e.preventDefault();
+					handleCreateFolder(item.id, e);
+				}}
+				class="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+				title="Create folder"
+			>
+				<svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+				</svg>
+				Create Folder
+			</button>
+		</div>
 		
 		<!-- Drop zone to move to the end of root level -->
 		{#if isRootDropZone}
@@ -523,39 +716,78 @@
 								d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
 							/>
 						</svg>
-						<h3 class="text-sm font-semibold text-gray-800">{child.title}</h3>
+						{#if editingFolderId === child.id}
+							<input
+								data-folder-edit={child.id}
+								type="text"
+								bind:value={editingFolderTitle}
+								class="flex-1 rounded border border-blue-500 px-2 py-1 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										handleSaveFolder(child.id, e);
+									} else if (e.key === 'Escape') {
+										handleCancelEdit(e);
+									}
+								}}
+								onclick={(e) => e.stopPropagation()}
+							/>
+						{:else}
+							<h3 class="text-sm font-semibold text-gray-800">{child.title}</h3>
+						{/if}
 						<div class="ml-auto flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 [.group:not(:hover)_&]:!opacity-0">
-							<button
-								onclick={(e) => handleCreateBookmark(child.id, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-								title="Add bookmark"
-							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-								</svg>
-							</button>
-							<button
-								onclick={(e) => handleCreateFolder(child.id, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-								title="Add folder"
-							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6" />
-								</svg>
-							</button>
-							<button
-								onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
-								class="flex size-5 items-center justify-center rounded-full bg-gray-400 text-white transition-colors hover:bg-gray-600"
-								title="Delete folder"
-							>
-								<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-								</svg>
-							</button>
+							{#if editingFolderId === child.id}
+								<button
+									onclick={(e) => handleSaveFolder(child.id, e)}
+									class="flex size-5 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+									title="Save"
+								>
+									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+									</svg>
+								</button>
+							{:else}
+								<button
+									onclick={(e) => handleCreateBookmark(child.id, e)}
+									class="flex size-5 items-center justify-center rounded-full bg-blue-500 text-white shadow-sm transition-all hover:bg-blue-600 hover:shadow-md"
+									title="Add bookmark"
+								>
+									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+									</svg>
+								</button>
+								<button
+									onclick={(e) => handleCreateFolder(child.id, e)}
+									class="flex size-5 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition-all hover:bg-green-600 hover:shadow-md"
+									title="Add folder"
+								>
+									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+									</svg>
+								</button>
+								<button
+									onclick={(e) => handleStartEditFolder(child.id, child.title, e)}
+									class="flex size-5 items-center justify-center rounded-full bg-yellow-500 text-white shadow-sm transition-all hover:bg-yellow-600 hover:shadow-md"
+									title="Edit folder"
+								>
+									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+									</svg>
+								</button>
+								<button
+									onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
+									class="flex size-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md"
+									title="Delete folder"
+								>
+									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							{/if}
 						</div>
 					</div>
 					<div
 						role="region"
+						class="relative"
 						ondragover={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -563,12 +795,27 @@
 						}}
 						ondrop={(e) => handleFolderDrop(child, e)}
 					>
-						{#if child.children && child.children.length > 0}
+						{#if child.children?.length}
 							<Self item={child} level={level + 1} {onDelete} {onMove} />
+							<!-- Add bookmark button inside nested folder with content -->
+							<div class="mt-1 flex">
+								<button
+									onclick={(e) => {
+										e.stopPropagation();
+										handleCreateBookmark(child.id, e);
+									}}
+									class="flex size-5 items-center justify-center rounded-full border-2 border-dashed border-gray-300 bg-white text-gray-400 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-500"
+									title="Add bookmark"
+								>
+									<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+									</svg>
+								</button>
+							</div>
 						{:else}
 							<!-- Empty folder state -->
-							<div class="py-2 text-xs text-gray-400 italic">
-								Empty folder - drag items here or use buttons above
+							<div class="relative z-10 flex items-center gap-2 py-2 pl-1">
+								<p class="text-xs text-gray-400">Empty</p>
 							</div>
 						{/if}
 					</div>

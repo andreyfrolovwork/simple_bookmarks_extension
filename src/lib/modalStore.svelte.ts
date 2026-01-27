@@ -1,4 +1,9 @@
-type ModalType = 'prompt' | 'confirm' | 'alert';
+type ModalType = 'prompt' | 'confirm' | 'alert' | 'bookmark';
+
+export interface BookmarkData {
+	url?: string;
+	title: string;
+}
 
 interface ModalState {
 	isOpen: boolean;
@@ -9,7 +14,7 @@ interface ModalState {
 	defaultValue?: string;
 	confirmText?: string;
 	cancelText?: string;
-	resolve?: (value: string | boolean | null) => void;
+	resolve?: (value: string | boolean | null | BookmarkData) => void;
 }
 
 class ModalStore {
@@ -22,7 +27,7 @@ class ModalStore {
 	confirmText = $state('OK');
 	cancelText = $state('Cancel');
 	
-	private resolve?: (value: string | boolean | null) => void;
+	private resolve?: (value: string | boolean | null | BookmarkData) => void;
 
 	prompt(message: string, defaultValue: string = ''): Promise<string | null> {
 		return new Promise((resolve) => {
@@ -34,7 +39,7 @@ class ModalStore {
 			this.placeholder = '';
 			this.confirmText = 'OK';
 			this.cancelText = 'Cancel';
-			this.resolve = resolve as (value: string | boolean | null) => void;
+			this.resolve = resolve as (value: string | boolean | null | BookmarkData) => void;
 		});
 	}
 
@@ -46,7 +51,9 @@ class ModalStore {
 			this.message = message;
 			this.confirmText = 'Confirm';
 			this.cancelText = 'Cancel';
-			this.resolve = resolve as (value: string | boolean | null) => void;
+			this.resolve = ((value: string | boolean | null | BookmarkData) => {
+				resolve(value === true);
+			}) as (value: string | boolean | null | BookmarkData) => void;
 		});
 	}
 
@@ -58,11 +65,23 @@ class ModalStore {
 			this.message = message;
 			this.confirmText = 'OK';
 			this.cancelText = '';
-			this.resolve = resolve as (value: string | boolean | null) => void;
+			this.resolve = resolve as (value: string | boolean | null | BookmarkData) => void;
 		});
 	}
 
-	close(value: string | boolean | null = null) {
+	bookmarkPrompt(): Promise<BookmarkData | null> {
+		return new Promise((resolve) => {
+			this.isOpen = true;
+			this.type = 'bookmark';
+			this.title = 'Create Bookmark';
+			this.message = '';
+			this.confirmText = 'Create';
+			this.cancelText = 'Cancel';
+			this.resolve = resolve as (value: string | boolean | null | BookmarkData) => void;
+		});
+	}
+
+	close(value: string | boolean | null | BookmarkData = null) {
 		if (this.resolve) {
 			this.resolve(value);
 		}

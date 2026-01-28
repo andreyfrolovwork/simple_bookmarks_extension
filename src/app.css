@@ -15,27 +15,27 @@
 /* CSS переменные для светлой темы */
 :root {
 	--bg-primary: #ffffff;
-	--bg-secondary: #fce4ec;
-	--bg-surface: #f5f5f5;
+	--bg-secondary: #fefefe;
+	--bg-surface: #fdfdfd;
 	--accent-primary: #81c784;
 	--accent-secondary: #90caf9;
 	--text-primary: #2d3748;
 	--text-secondary: #718096;
-	--border: #ececec;
-	--shadow: rgba(0, 0, 0, 0.05);
+	--border: #fcfcfc;
+	--shadow: rgba(0, 0, 0, 0.01);
 }
 
 /* CSS переменные для темной темы */
 .dark {
 	--bg-primary: #1a1a2e;
-	--bg-secondary: #16213e;
-	--bg-surface: #0f3460;
+	--bg-secondary: #1b1b2f;
+	--bg-surface: #1b1b30;
 	--accent-primary: #6c5ce7;
 	--accent-secondary: #00d4ff;
 	--text-primary: #e8e8e8;
 	--text-secondary: #a0a0a0;
-	--border: #252538;
-	--shadow: rgba(0, 0, 0, 0.12);
+	--border: #1c1c2f;
+	--shadow: rgba(0, 0, 0, 0.03);
 }
 
 body {

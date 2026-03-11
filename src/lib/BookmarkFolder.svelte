@@ -672,15 +672,16 @@
 		align-self: flex-start;
 		padding: 12px;
 		background-color: var(--bg-surface);
-		border: 4px solid var(--border);
+		border: 1px solid transparent;
 		box-shadow: 4px 4px 0px var(--shadow);
-		transition: transform 0.1s steps(2), box-shadow 0.1s, opacity 0.2s;
+		transition: transform 0.1s steps(2), box-shadow 0.1s, opacity 0.2s, border-color 0.1s;
 		min-width: 200px;
 	}
 
 	.pixel-folder:hover {
 		transform: translate(-2px, -2px);
 		box-shadow: 6px 6px 0px var(--shadow);
+		border-color: var(--border-folder);
 	}
 
 	.pixel-folder.dragging {
@@ -902,13 +903,13 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
-		border-left: 4px solid var(--border);
+		border-left: 1px solid transparent;
 		padding-left: 12px;
 		transition: all 0.1s;
 	}
 
 	.pixel-nested-folder:hover {
-		border-color: var(--accent-secondary);
+		border-left-color: var(--border-folder);
 	}
 
 	.pixel-nested-folder.dragging {

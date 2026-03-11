@@ -5,6 +5,7 @@
 	import { deleteBookmark } from './deleteBookmark';
 	import { dragStore } from './dragStore';
 	import { moveBookmark } from './moveBookmark';
+	import { updateBookmark } from './updateBookmark';
 	import { modalStore } from './modalStore.svelte';
 
 	let { 
@@ -38,9 +39,34 @@
 	async function handleDelete(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
-		
+
 		await deleteBookmark(item.id, false);
 		onDelete?.();
+	}
+
+	// Edit handler
+	async function handleEdit(e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+
+		if (!item.url) return;
+		const data = await modalStore.bookmarkEditPrompt(item.url, item.title);
+		if (!data || !data.url) return;
+
+		try {
+			let normalizedUrl = data.url.trim();
+			if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+				normalizedUrl = `https://${normalizedUrl}`;
+			}
+			await updateBookmark(item.id, {
+				title: data.title.trim(),
+				url: normalizedUrl
+			});
+			onMove?.();
+		} catch (error) {
+			console.error('❌ Error updating bookmark:', error);
+			await modalStore.alert('Failed to update bookmark', 'Error');
+		}
 	}
 
 	// Drag and Drop handlers
@@ -180,6 +206,13 @@
 		<span class="bookmark-title">{item.title}</span>
 	</a>
 	<button
+		onclick={handleEdit}
+		class="pixel-edit-btn"
+		title="Edit"
+	>
+		<Icon name="edit" size={12} />
+	</button>
+	<button
 		onclick={handleDelete}
 		class="pixel-delete-btn"
 		title="Delete"
@@ -219,19 +252,16 @@
 		align-items: center;
 		gap: 8px;
 		padding: 8px 12px;
-		background-color: var(--bg-surface);
-		border: 4px solid var(--border);
+		background-color: transparent;
 		color: var(--text-primary);
 		text-decoration: none;
 		cursor: pointer;
-		transition: transform 0.1s steps(2), box-shadow 0.1s;
-		box-shadow: 4px 4px 0px var(--shadow);
+		transition: transform 0.1s steps(2), box-shadow 0.1s, text-decoration 0.1s;
 	}
 
 	.pixel-bookmark:hover {
 		transform: translate(-2px, -2px);
-		box-shadow: 6px 6px 0px var(--shadow);
-		background-color: var(--accent-secondary);
+		text-decoration: underline;
 	}
 
 	.pixel-bookmark.dragging {
@@ -240,15 +270,14 @@
 	}
 
 	.pixel-bookmark.drop-target {
-		background-color: var(--accent-primary);
-		border-color: var(--accent-primary);
-		transform: scale(1.05);
-		box-shadow: 6px 6px 0px var(--shadow);
+		outline: 2px solid var(--accent-primary);
+		outline-offset: 2px;
+		transform: scale(1.02);
 	}
 
+	.pixel-edit-btn,
 	.pixel-delete-btn {
 		position: absolute;
-		left: -8px;
 		top: -8px;
 		width: 24px;
 		height: 24px;
@@ -265,8 +294,23 @@
 		justify-content: center;
 	}
 
+	.pixel-edit-btn {
+		right: -8px;
+	}
+
+	.pixel-delete-btn {
+		left: -8px;
+	}
+
+	.group:hover .pixel-edit-btn,
 	.group:hover .pixel-delete-btn {
 		opacity: 1;
+	}
+
+	.pixel-edit-btn:hover {
+		background-color: var(--accent-secondary);
+		transform: translate(-1px, -1px);
+		box-shadow: 3px 3px 0px var(--shadow);
 	}
 
 	.pixel-delete-btn:hover {
@@ -275,6 +319,7 @@
 		box-shadow: 3px 3px 0px var(--shadow);
 	}
 
+	.pixel-edit-btn:active,
 	.pixel-delete-btn:active {
 		transform: translate(1px, 1px);
 		box-shadow: 1px 1px 0px var(--shadow);

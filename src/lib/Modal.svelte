@@ -94,8 +94,14 @@
 				inputElement?.focus();
 			}, 100);
 		} else if (modalStore.isOpen && modalStore.type === 'bookmark') {
-			bookmarkUrl = '';
-			bookmarkTitle = '';
+			const initial = modalStore.getBookmarkInitial();
+			if (initial) {
+				bookmarkUrl = initial.url || '';
+				bookmarkTitle = initial.title || '';
+			} else {
+				bookmarkUrl = '';
+				bookmarkTitle = '';
+			}
 			urlTouched = false;
 			// Focus URL input after it's rendered
 			setTimeout(() => {

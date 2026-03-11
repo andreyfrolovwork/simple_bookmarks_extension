@@ -17,6 +17,11 @@ interface ModalState {
 	resolve?: (value: string | boolean | null | BookmarkData) => void;
 }
 
+export interface BookmarkEditInitial {
+	url: string;
+	title: string;
+}
+
 class ModalStore {
 	isOpen = $state(false);
 	type = $state<ModalType>('alert');
@@ -69,8 +74,11 @@ class ModalStore {
 		});
 	}
 
+	private bookmarkInitial: BookmarkEditInitial | null = null;
+
 	bookmarkPrompt(): Promise<BookmarkData | null> {
 		return new Promise((resolve) => {
+			this.bookmarkInitial = null;
 			this.isOpen = true;
 			this.type = 'bookmark';
 			this.title = 'Create Bookmark';
@@ -79,6 +87,23 @@ class ModalStore {
 			this.cancelText = 'Cancel';
 			this.resolve = resolve as (value: string | boolean | null | BookmarkData) => void;
 		});
+	}
+
+	bookmarkEditPrompt(initialUrl: string, initialTitle: string): Promise<BookmarkData | null> {
+		return new Promise((resolve) => {
+			this.bookmarkInitial = { url: initialUrl, title: initialTitle };
+			this.isOpen = true;
+			this.type = 'bookmark';
+			this.title = 'Edit Bookmark';
+			this.message = '';
+			this.confirmText = 'Save';
+			this.cancelText = 'Cancel';
+			this.resolve = resolve as (value: string | boolean | null | BookmarkData) => void;
+		});
+	}
+
+	getBookmarkInitial(): BookmarkEditInitial | null {
+		return this.bookmarkInitial;
 	}
 
 	close(value: string | boolean | null | BookmarkData = null) {

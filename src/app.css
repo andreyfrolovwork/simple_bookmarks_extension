@@ -22,6 +22,7 @@
 	--text-primary: #2d3748;
 	--text-secondary: #718096;
 	--border: #fcfcfc;
+	--border-folder: #cbd5e0;
 	--shadow: rgba(0, 0, 0, 0.01);
 }
 
@@ -35,6 +36,7 @@
 	--text-primary: #e8e8e8;
 	--text-secondary: #a0a0a0;
 	--border: #1c1c2f;
+	--border-folder: #4a5568;
 	--shadow: rgba(0, 0, 0, 0.03);
 }
 

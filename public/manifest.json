@@ -9,8 +9,7 @@
     "128": "icons/icon128.png"
   },
   "permissions": [
-    "bookmarks",
-    "storage"
+    "bookmarks"
   ],
   "action": {
     "default_title": "Open Bookmark Manager"

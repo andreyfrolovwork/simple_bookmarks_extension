@@ -7,6 +7,8 @@
 	import { moveBookmark } from './moveBookmark';
 	import { updateBookmark } from './updateBookmark';
 	import { modalStore } from './modalStore.svelte';
+	import { archiveBookmark } from './archiveBookmark';
+	import { archiveModeStore } from './archiveModeStore';
 
 	let { 
 		item, 
@@ -109,6 +111,19 @@
 		dropPosition = null;
 	}
 
+	async function handleArchive(e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+
+		try {
+			await archiveBookmark(item.id);
+			onMove?.();
+		} catch (error) {
+			console.error('❌ Error archiving:', error);
+			await modalStore.alert('Failed to archive bookmark', 'Error');
+		}
+	}
+
 	async function handleDrop(e: DragEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -186,10 +201,15 @@
 		ondragover={handleDragOver}
 		ondragleave={handleDragLeave}
 		ondrop={handleDrop}
+		onclick={(e) => {
+			if (e.metaKey) {
+				handleArchive(e);
+			}
+		}}
 		class="pixel-bookmark"
 		class:dragging={isDragging}
 		class:drop-target={isDropTarget && !dropPosition}
-		title={item.title}
+		title={$archiveModeStore ? '⌘+click to archive' : item.title}
 	>
 		<span class="bookmark-icon">
 			{#if item.url && !faviconError}
@@ -205,20 +225,26 @@
 		</span>
 		<span class="bookmark-title">{item.title}</span>
 	</a>
-	<button
-		onclick={handleEdit}
-		class="pixel-edit-btn"
-		title="Edit"
-	>
-		<Icon name="edit" size={12} />
-	</button>
-	<button
-		onclick={handleDelete}
-		class="pixel-delete-btn"
-		title="Delete"
-	>
-		<Icon name="close" size={12} />
-	</button>
+	{#if $archiveModeStore}
+		<span class="pixel-archive-btn" title="⌘+click to archive">
+			<Icon name="archive" size={12} />
+		</span>
+	{:else}
+		<button
+			onclick={handleEdit}
+			class="pixel-edit-btn"
+			title="Edit"
+		>
+			<Icon name="edit" size={12} />
+		</button>
+		<button
+			onclick={handleDelete}
+			class="pixel-delete-btn"
+			title="Delete"
+		>
+			<Icon name="close" size={12} />
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -303,8 +329,32 @@
 	}
 
 	.group:hover .pixel-edit-btn,
-	.group:hover .pixel-delete-btn {
+	.group:hover .pixel-delete-btn,
+	.group:hover .pixel-archive-btn {
 		opacity: 1;
+	}
+
+	.pixel-archive-btn {
+		position: absolute;
+		top: -8px;
+		right: -8px;
+		width: 24px;
+		height: 24px;
+		background-color: var(--bg-secondary);
+		border: 2px solid var(--border);
+		color: var(--text-primary);
+		font-size: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		opacity: 0;
+		transition: opacity 0.2s, transform 0.1s steps(2), box-shadow 0.1s;
+		box-shadow: 2px 2px 0px var(--shadow);
+		pointer-events: none;
+	}
+
+	.pixel-archive-btn:hover {
+		background-color: var(--accent-secondary);
 	}
 
 	.pixel-edit-btn:hover {

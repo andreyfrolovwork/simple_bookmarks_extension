@@ -10,6 +10,8 @@
 	import { createBookmark } from './createBookmark';
 	import { updateBookmark } from './updateBookmark';
 	import { modalStore } from './modalStore.svelte';
+	import { archiveBookmark } from './archiveBookmark';
+	import { archiveModeStore } from './archiveModeStore';
 
 	let { 
 		item, 
@@ -27,6 +29,7 @@
 	let dropTargetFolderId = $state<string | null>(null);
 	let dropMode: 'into' | 'before' | 'after' | null = $state(null);
 	let isRootDropZone = $state(false);
+	let bookmarkInsertZone = $state<{ parentId: string; index: number } | null>(null);
 	let editingFolderId = $state<string | null>(null);
 	let editingFolderTitle = $state('');
 
@@ -57,6 +60,20 @@
 		
 		return groups;
 	});
+
+	async function handleArchiveFolder(folderId: string, e: MouseEvent | KeyboardEvent) {
+		if (!('metaKey' in e) || !e.metaKey) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		try {
+			await archiveBookmark(folderId);
+			onMove?.();
+		} catch (error) {
+			console.error('❌ Error archiving folder:', error);
+			await modalStore.alert('Failed to archive folder', 'Error');
+		}
+	}
 
 	async function handleDeleteFolder(folderId: string, folderTitle: string, e: MouseEvent) {
 		e.preventDefault();
@@ -217,34 +234,81 @@
 
 	function handleFolderDragOver(folderItem: BookmarkItem, e: DragEvent) {
 		e.preventDefault();
-		e.stopPropagation();
-		
-		const draggedItem = dragStore.item;
-		
-		if (draggedItem && draggedItem.id !== folderItem.id) {
-			dropTargetFolderId = folderItem.id;
-			
-			const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-			const y = e.clientY - rect.top;
-			const height = rect.height;
-			
-			if (y < height * 0.25) {
-				dropMode = 'before';
-			} else if (y > height * 0.75) {
-				dropMode = 'after';
-			} else {
-				dropMode = 'into';
-			}
-			
-			if (e.dataTransfer) {
-				e.dataTransfer.dropEffect = 'move';
-			}
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = 'move';
 		}
+
+		const draggedItem = dragStore.item;
+		if (!draggedItem || draggedItem.id === folderItem.id) return;
+
+		e.stopPropagation();
+
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const y = e.clientY - rect.top;
+		const height = rect.height;
+
+		let mode: 'before' | 'after' | 'into' = 'into';
+		if (y < height * 0.25) {
+			mode = 'before';
+		} else if (y > height * 0.75) {
+			mode = 'after';
+		}
+
+		// При перетаскивании ссылки не подсвечивать "вставь в папку" — только before/after
+		const isBookmark = Boolean(draggedItem.url);
+		if (isBookmark && mode === 'into') {
+			dropTargetFolderId = null;
+			dropMode = null;
+			return;
+		}
+
+		dropTargetFolderId = folderItem.id;
+		dropMode = mode;
 	}
 
 	function handleFolderDragLeave() {
 		dropTargetFolderId = null;
 		dropMode = null;
+	}
+
+	async function handleBookmarkInsertZoneDragOver(parentId: string, index: number, e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+		const draggedItem = dragStore.item;
+		if (!draggedItem) return;
+
+		bookmarkInsertZone = { parentId, index };
+	}
+
+	function handleBookmarkInsertZoneDragLeave() {
+		bookmarkInsertZone = null;
+	}
+
+	async function handleBookmarkInsertZoneDrop(parentId: string, index: number, e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		bookmarkInsertZone = null;
+
+		const draggedItem = dragStore.item;
+		const draggedFromParentId = dragStore.parentId;
+		if (!draggedItem) return;
+
+		try {
+			let targetIndex = index;
+			if (draggedFromParentId === parentId) {
+				const parentNode = await chrome.bookmarks.getSubTree(parentId);
+				const siblings = parentNode[0]?.children || [];
+				const draggedIndex = siblings.findIndex((s: chrome.bookmarks.BookmarkTreeNode) => s.id === draggedItem.id);
+				if (draggedIndex !== -1 && draggedIndex < targetIndex) targetIndex--;
+			}
+			await moveBookmark(draggedItem.id, { parentId, index: targetIndex });
+			setTimeout(() => onMove?.(), 100);
+		} catch (error) {
+			console.error('❌ Insert zone drop error:', error);
+			await modalStore.alert('Failed to move bookmark', 'Error');
+		}
 	}
 
 	function handleRootDragOver(e: DragEvent) {
@@ -397,7 +461,9 @@
 					ondragover={(e) => handleFolderDragOver(group.item, e)}
 					ondragleave={handleFolderDragLeave}
 					ondrop={(e) => handleFolderDrop(group.item, e)}
-					title={group.item.title}
+					onclick={(e) => handleArchiveFolder(group.item.id, e)}
+					onkeydown={(e) => e.metaKey && (e.key === 'Enter' || e.key === ' ') && handleArchiveFolder(group.item.id, e)}
+					title={$archiveModeStore ? '⌘+click to archive' : group.item.title}
 				>
 					{#if dropTargetFolderId === group.item.id && dropMode === 'before'}
 						<div class="drop-indicator-before" transition:scale={{ duration: 200 }}></div>
@@ -448,41 +514,58 @@
 								<Icon name="check" size={12} />
 							</button>
 						{:else}
-							<button
-								onclick={(e) => handleCreateBookmark(group.item.id, e)}
-								class="pixel-action-btn"
-								title="Add bookmark"
-							>
-								<Icon name="add" size={12} />
-							</button>
-							<button
-								onclick={(e) => handleCreateFolder(group.item.id, e)}
-								class="pixel-action-btn"
-								title="Add folder"
-							>
-								<Icon name="folder" size={12} />
-							</button>
-							<button
-								onclick={(e) => handleStartEditFolder(group.item.id, group.item.title, e)}
-								class="pixel-action-btn"
-								title="Edit"
-							>
-								<Icon name="edit" size={12} />
-							</button>
-							<button
-								onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
-								class="pixel-action-btn pixel-action-danger"
-								title="Delete"
-							>
-								<Icon name="trash" size={12} />
-							</button>
+							{#if $archiveModeStore}
+								<span class="pixel-action-btn pixel-archive-indicator" title="⌘+click to archive">
+									<Icon name="archive" size={12} />
+								</span>
+							{:else}
+								<button
+									onclick={(e) => handleCreateBookmark(group.item.id, e)}
+									class="pixel-action-btn"
+									title="Add bookmark"
+								>
+									<Icon name="add" size={12} />
+								</button>
+								<button
+									onclick={(e) => handleCreateFolder(group.item.id, e)}
+									class="pixel-action-btn"
+									title="Add folder"
+								>
+									<Icon name="folder" size={12} />
+								</button>
+								<button
+									onclick={(e) => handleStartEditFolder(group.item.id, group.item.title, e)}
+									class="pixel-action-btn"
+									title="Edit"
+								>
+									<Icon name="edit" size={12} />
+								</button>
+								<button
+									onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
+									class="pixel-action-btn pixel-action-danger"
+									title="Delete"
+								>
+									<Icon name="trash" size={12} />
+								</button>
+							{/if}
 						{/if}
 					</div>
 				</div>
 			{:else}
 				<!-- Bookmark group -->
 				<div class="pixel-bookmark-group">
-					{#each group.items as bookmark (bookmark.id)}
+					{#each group.items as bookmark, i (bookmark.id)}
+						<div
+							class="bookmark-insert-zone"
+							role="presentation"
+							ondragover={(e) => handleBookmarkInsertZoneDragOver(item.id, i, e)}
+							ondragleave={handleBookmarkInsertZoneDragLeave}
+							ondrop={(e) => handleBookmarkInsertZoneDrop(item.id, i, e)}
+						>
+							{#if bookmarkInsertZone?.parentId === item.id && bookmarkInsertZone?.index === i}
+								<div class="insert-zone-line"></div>
+							{/if}
+						</div>
 						<div transition:fly={{ y: 10, duration: 300 }}>
 							<Bookmark item={bookmark} parentId={item.id} {onDelete} {onMove} />
 						</div>
@@ -533,7 +616,18 @@
 {:else}
 	<!-- Nested levels - vertical list -->
 	<div class="pixel-nested-container">
-		{#each item.children || [] as child (child.id)}
+		{#each item.children || [] as child, childIndex (child.id)}
+			<div
+				class="bookmark-insert-zone"
+				role="presentation"
+				ondragover={(e) => handleBookmarkInsertZoneDragOver(item.id, childIndex, e)}
+				ondragleave={handleBookmarkInsertZoneDragLeave}
+				ondrop={(e) => handleBookmarkInsertZoneDrop(item.id, childIndex, e)}
+			>
+				{#if bookmarkInsertZone?.parentId === item.id && bookmarkInsertZone?.index === childIndex}
+					<div class="insert-zone-line"></div>
+				{/if}
+			</div>
 			{#if isFolder(child)}
 				<div 
 					class="pixel-nested-folder"
@@ -547,7 +641,9 @@
 					ondragover={(e) => handleFolderDragOver(child, e)}
 					ondragleave={handleFolderDragLeave}
 					ondrop={(e) => handleFolderDrop(child, e)}
-					title={child.title}
+					onclick={(e) => handleArchiveFolder(child.id, e)}
+					onkeydown={(e) => e.metaKey && (e.key === 'Enter' || e.key === ' ') && handleArchiveFolder(child.id, e)}
+					title={$archiveModeStore ? '⌘+click to archive' : child.title}
 				>
 					{#if dropTargetFolderId === child.id && dropMode === 'before'}
 						<div class="drop-indicator-before" transition:scale={{ duration: 200 }}></div>
@@ -589,34 +685,40 @@
 									<Icon name="check" size={10} />
 								</button>
 							{:else}
-								<button
-									onclick={(e) => handleCreateBookmark(child.id, e)}
-									class="pixel-action-btn-small"
-									title="Add bookmark"
-								>
-									<Icon name="add" size={10} />
-								</button>
-								<button
-									onclick={(e) => handleCreateFolder(child.id, e)}
-									class="pixel-action-btn-small"
-									title="Add folder"
-								>
-									<Icon name="folder" size={10} />
-								</button>
-								<button
-									onclick={(e) => handleStartEditFolder(child.id, child.title, e)}
-									class="pixel-action-btn-small"
-									title="Edit"
-								>
-									<Icon name="edit" size={10} />
-								</button>
-								<button
-									onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
-									class="pixel-action-btn-small pixel-action-danger"
-									title="Delete"
-								>
-									<Icon name="trash" size={10} />
-								</button>
+								{#if $archiveModeStore}
+									<span class="pixel-action-btn-small pixel-archive-indicator" title="⌘+click to archive">
+										<Icon name="archive" size={10} />
+									</span>
+								{:else}
+									<button
+										onclick={(e) => handleCreateBookmark(child.id, e)}
+										class="pixel-action-btn-small"
+										title="Add bookmark"
+									>
+										<Icon name="add" size={10} />
+									</button>
+									<button
+										onclick={(e) => handleCreateFolder(child.id, e)}
+										class="pixel-action-btn-small"
+										title="Add folder"
+									>
+										<Icon name="folder" size={10} />
+									</button>
+									<button
+										onclick={(e) => handleStartEditFolder(child.id, child.title, e)}
+										class="pixel-action-btn-small"
+										title="Edit"
+									>
+										<Icon name="edit" size={10} />
+									</button>
+									<button
+										onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
+										class="pixel-action-btn-small pixel-action-danger"
+										title="Delete"
+									>
+										<Icon name="trash" size={10} />
+									</button>
+								{/if}
 							{/if}
 						</div>
 					</div>
@@ -789,11 +891,36 @@
 		background-color: #ff6b6b;
 	}
 
-	/* Bookmark group */
+	.pixel-archive-indicator {
+		pointer-events: none;
+		cursor: default;
+	}
+
+	/* Bookmark insert zone - заменяет gap, отступ ~5px */
+	.bookmark-insert-zone {
+		height: 5px;
+		min-height: 5px;
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.insert-zone-line {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 50%;
+		height: 2px;
+		margin-top: -1px;
+		background-color: var(--accent-primary);
+		z-index: 10;
+		box-shadow: 0 0 4px var(--accent-primary);
+	}
+
+	/* Bookmark group - gap через insert zones для экономии места */
 	.pixel-bookmark-group {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 0;
 		flex-shrink: 0;
 	}
 
@@ -895,7 +1022,7 @@
 	.pixel-nested-container {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 0;
 	}
 
 	.pixel-nested-folder {

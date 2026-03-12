@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import BookmarksBar from './lib/BookmarksBar.svelte';
 	import Modal from './lib/Modal.svelte';
-	import { loadBookmarks } from './lib/loadBookmarks';
-	import { themeStore } from './lib/themeStore.svelte';
+import { loadBookmarks } from './lib/loadBookmarks';
+import { themeStore } from './lib/themeStore.svelte';
+import { initArchiveModeStore } from './lib/archiveModeStore';
 	import type { BookmarkItem } from './types';
 
 	let bookmarks = $state<BookmarkItem[]>([]);
@@ -15,9 +16,9 @@
 	}
 
 	onMount(async () => {
-		// Инициализация темы
 		themeStore.init();
-		
+		initArchiveModeStore();
+
 		await reloadBookmarks();
 		loading = false;
 	});

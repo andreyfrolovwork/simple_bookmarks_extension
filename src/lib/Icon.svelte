@@ -13,6 +13,7 @@
 	import arrowRight from 'pixelarticons/svg/arrow-right.svg?raw';
 	import externalLink from 'pixelarticons/svg/external-link.svg?raw';
 	import trash from 'pixelarticons/svg/trash.svg?raw';
+	import archive from 'pixelarticons/svg/archive.svg?raw';
 
 	let { 
 		name, 
@@ -37,7 +38,8 @@
 		settings,
 		'arrow-right': arrowRight,
 		'external-link': externalLink,
-		trash
+		trash,
+		archive
 	};
 
 	const iconSvg = $derived(icons[name] || '');

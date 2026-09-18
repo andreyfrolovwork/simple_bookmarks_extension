@@ -203,7 +203,11 @@ Privacy policy: https://andreyfrolovwork.github.io/simple_bookmarks_extension/pr
 npm run store:pack
 ```
 
-Локально: gitignored `bookmark-manager.zip`.
+Локально: gitignored `bookmark-manager.zip` (Chrome, с новой вкладкой) и `bookmark-manager-yandex.zip` (Яндекс, без подмены newtab — открытие по иконке).
+
+```bash
+npm run pack:all
+```
 
 После секретов в GitHub:
 

@@ -1,20 +1,22 @@
 ---
-description: Always rebuild dist after any code changes so the unpacked Chrome extension stays up to date
+description: After extension code changes, always produce both Chrome and Yandex builds
 alwaysApply: true
 ---
 
-# Rebuild dist after every change
+# Rebuild Chrome and Yandex packs after every change
 
-The unpacked extension loads from `dist/`. After any edit that affects the extension, rebuild before finishing.
+Unpacked Chrome loads from `dist/` (new tab override). Yandex cannot load `chrome_url_overrides`, so it needs `dist-yandex/` without that key.
 
-Applies to: `src/**`, `public/**`, `index.html`, `vite.config.*`, Tailwind/PostCSS, `package.json`.
+After any edit that affects the extension, produce **both** before finishing. Do not rebuild only Chrome.
 
-If a watcher is already running (`npm run build:watch` or `npm run dev:extension`) and rebuilt after your edits, do not start another.
-
-Otherwise:
+Applies to: `src/**`, `public/**`, `index.html`, `vite.config.*`, Tailwind/PostCSS, `package.json`, `scripts/pack-yandex.mjs`.
 
 ```bash
-npm run build
+npm run pack:all
 ```
 
-Wait until the command exits. Do not skip this for small UI or copy changes. Chrome will keep serving the old `dist/` until it is rebuilt.
+Wait until it exits. It builds `dist/`, zips `bookmark-manager.zip` (Chrome), then `dist-yandex/` and `bookmark-manager-yandex.zip` (Yandex, icon-only, no newtab).
+
+A `build:watch` / `dev:extension` watcher updates only `dist/`. That does **not** count as the Yandex build — still run `npm run pack:all` (or at least `npm run pack:yandex` after dist is current).
+
+Do not skip this for small UI or copy changes.

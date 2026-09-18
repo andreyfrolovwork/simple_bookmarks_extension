@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Bookmark Manager",
-  "version": "1.0.0",
-  "description": "Bookmark manager with visualization",
+  "version": "1.1.0",
+  "description": "Visual new tab for bookmarks: folders, search, local click stats, and archive unused links.",
+  "homepage_url": "https://github.com/andreyfrolovwork/simple_bookmarks_extension",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

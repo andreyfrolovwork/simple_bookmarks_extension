@@ -10,8 +10,9 @@
 	import { createBookmark } from './createBookmark';
 	import { updateBookmark } from './updateBookmark';
 	import { modalStore } from './modalStore.svelte';
-	import { archiveBookmark } from './archiveBookmark';
+	import { archiveBookmark, ARCHIVE_FOLDER_TITLE } from './archiveBookmark';
 	import { archiveModeStore } from './archiveModeStore';
+	import { archivePreviewIds, archivePreviewOpen } from './archivePreviewStore';
 
 	let { 
 		item, 
@@ -61,11 +62,7 @@
 		return groups;
 	});
 
-	async function handleArchiveFolder(folderId: string, e: MouseEvent | KeyboardEvent) {
-		if (!('metaKey' in e) || !e.metaKey) return;
-		e.preventDefault();
-		e.stopPropagation();
-
+	async function archiveFolder(folderId: string) {
 		try {
 			await archiveBookmark(folderId);
 			onMove?.();
@@ -73,6 +70,19 @@
 			console.error('❌ Error archiving folder:', error);
 			await modalStore.alert('Failed to archive folder', 'Error');
 		}
+	}
+
+	async function handleArchiveFolderShortcut(folderId: string, e: MouseEvent | KeyboardEvent) {
+		if (!('metaKey' in e) || !e.metaKey) return;
+		e.preventDefault();
+		e.stopPropagation();
+		await archiveFolder(folderId);
+	}
+
+	async function handleArchiveFolderButton(folderId: string, e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		await archiveFolder(folderId);
 	}
 
 	async function handleDeleteFolder(folderId: string, folderTitle: string, e: MouseEvent) {
@@ -453,6 +463,7 @@
 					class="pixel-folder"
 					class:dragging={isDraggingFolder && dragStore.item?.id === group.item.id}
 					class:drop-into={dropTargetFolderId === group.item.id && dropMode === 'into'}
+					class:archive-preview={$archivePreviewOpen && $archivePreviewIds.has(group.item.id)}
 					draggable="true"
 					role="button"
 					tabindex="0"
@@ -461,8 +472,8 @@
 					ondragover={(e) => handleFolderDragOver(group.item, e)}
 					ondragleave={handleFolderDragLeave}
 					ondrop={(e) => handleFolderDrop(group.item, e)}
-					onclick={(e) => handleArchiveFolder(group.item.id, e)}
-					onkeydown={(e) => e.metaKey && (e.key === 'Enter' || e.key === ' ') && handleArchiveFolder(group.item.id, e)}
+					onclick={(e) => handleArchiveFolderShortcut(group.item.id, e)}
+					onkeydown={(e) => e.metaKey && (e.key === 'Enter' || e.key === ' ') && handleArchiveFolderShortcut(group.item.id, e)}
 					title={$archiveModeStore ? '⌘+click to archive' : group.item.title}
 				>
 					{#if dropTargetFolderId === group.item.id && dropMode === 'before'}
@@ -514,40 +525,43 @@
 								<Icon name="check" size={12} />
 							</button>
 						{:else}
-							{#if $archiveModeStore}
-								<span class="pixel-action-btn pixel-archive-indicator" title="⌘+click to archive">
+							<button
+								onclick={(e) => handleCreateBookmark(group.item.id, e)}
+								class="pixel-action-btn"
+								title="Add bookmark"
+							>
+								<Icon name="add" size={12} />
+							</button>
+							<button
+								onclick={(e) => handleCreateFolder(group.item.id, e)}
+								class="pixel-action-btn"
+								title="Add folder"
+							>
+								<Icon name="folder" size={12} />
+							</button>
+							<button
+								onclick={(e) => handleStartEditFolder(group.item.id, group.item.title, e)}
+								class="pixel-action-btn"
+								title="Edit"
+							>
+								<Icon name="edit" size={12} />
+							</button>
+							{#if group.item.title !== ARCHIVE_FOLDER_TITLE}
+								<button
+									onclick={(e) => handleArchiveFolderButton(group.item.id, e)}
+									class="pixel-action-btn"
+									title="Archive folder"
+								>
 									<Icon name="archive" size={12} />
-								</span>
-							{:else}
-								<button
-									onclick={(e) => handleCreateBookmark(group.item.id, e)}
-									class="pixel-action-btn"
-									title="Add bookmark"
-								>
-									<Icon name="add" size={12} />
-								</button>
-								<button
-									onclick={(e) => handleCreateFolder(group.item.id, e)}
-									class="pixel-action-btn"
-									title="Add folder"
-								>
-									<Icon name="folder" size={12} />
-								</button>
-								<button
-									onclick={(e) => handleStartEditFolder(group.item.id, group.item.title, e)}
-									class="pixel-action-btn"
-									title="Edit"
-								>
-									<Icon name="edit" size={12} />
-								</button>
-								<button
-									onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
-									class="pixel-action-btn pixel-action-danger"
-									title="Delete"
-								>
-									<Icon name="trash" size={12} />
 								</button>
 							{/if}
+							<button
+								onclick={(e) => handleDeleteFolder(group.item.id, group.item.title, e)}
+								class="pixel-action-btn pixel-action-danger"
+								title="Delete"
+							>
+								<Icon name="trash" size={12} />
+							</button>
 						{/if}
 					</div>
 				</div>
@@ -633,6 +647,7 @@
 					class="pixel-nested-folder"
 					class:dragging={isDraggingFolder && dragStore.item?.id === child.id}
 					class:drop-into={dropTargetFolderId === child.id && dropMode === 'into'}
+					class:archive-preview={$archivePreviewOpen && $archivePreviewIds.has(child.id)}
 					draggable="true"
 					role="button"
 					tabindex="0"
@@ -641,8 +656,8 @@
 					ondragover={(e) => handleFolderDragOver(child, e)}
 					ondragleave={handleFolderDragLeave}
 					ondrop={(e) => handleFolderDrop(child, e)}
-					onclick={(e) => handleArchiveFolder(child.id, e)}
-					onkeydown={(e) => e.metaKey && (e.key === 'Enter' || e.key === ' ') && handleArchiveFolder(child.id, e)}
+					onclick={(e) => handleArchiveFolderShortcut(child.id, e)}
+					onkeydown={(e) => e.metaKey && (e.key === 'Enter' || e.key === ' ') && handleArchiveFolderShortcut(child.id, e)}
 					title={$archiveModeStore ? '⌘+click to archive' : child.title}
 				>
 					{#if dropTargetFolderId === child.id && dropMode === 'before'}
@@ -685,40 +700,43 @@
 									<Icon name="check" size={10} />
 								</button>
 							{:else}
-								{#if $archiveModeStore}
-									<span class="pixel-action-btn-small pixel-archive-indicator" title="⌘+click to archive">
+								<button
+									onclick={(e) => handleCreateBookmark(child.id, e)}
+									class="pixel-action-btn-small"
+									title="Add bookmark"
+								>
+									<Icon name="add" size={10} />
+								</button>
+								<button
+									onclick={(e) => handleCreateFolder(child.id, e)}
+									class="pixel-action-btn-small"
+									title="Add folder"
+								>
+									<Icon name="folder" size={10} />
+								</button>
+								<button
+									onclick={(e) => handleStartEditFolder(child.id, child.title, e)}
+									class="pixel-action-btn-small"
+									title="Edit"
+								>
+									<Icon name="edit" size={10} />
+								</button>
+								{#if child.title !== ARCHIVE_FOLDER_TITLE}
+									<button
+										onclick={(e) => handleArchiveFolderButton(child.id, e)}
+										class="pixel-action-btn-small"
+										title="Archive folder"
+									>
 										<Icon name="archive" size={10} />
-									</span>
-								{:else}
-									<button
-										onclick={(e) => handleCreateBookmark(child.id, e)}
-										class="pixel-action-btn-small"
-										title="Add bookmark"
-									>
-										<Icon name="add" size={10} />
-									</button>
-									<button
-										onclick={(e) => handleCreateFolder(child.id, e)}
-										class="pixel-action-btn-small"
-										title="Add folder"
-									>
-										<Icon name="folder" size={10} />
-									</button>
-									<button
-										onclick={(e) => handleStartEditFolder(child.id, child.title, e)}
-										class="pixel-action-btn-small"
-										title="Edit"
-									>
-										<Icon name="edit" size={10} />
-									</button>
-									<button
-										onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
-										class="pixel-action-btn-small pixel-action-danger"
-										title="Delete"
-									>
-										<Icon name="trash" size={10} />
 									</button>
 								{/if}
+								<button
+									onclick={(e) => handleDeleteFolder(child.id, child.title, e)}
+									class="pixel-action-btn-small pixel-action-danger"
+									title="Delete"
+								>
+									<Icon name="trash" size={10} />
+								</button>
 							{/if}
 						</div>
 					</div>
@@ -796,6 +814,13 @@
 		border-color: var(--accent-primary);
 		transform: scale(1.05);
 		box-shadow: 6px 6px 0px var(--shadow);
+	}
+
+	.pixel-folder.archive-preview,
+	.pixel-nested-folder.archive-preview {
+		background-color: var(--archive-preview);
+		border-color: var(--archive-preview-border);
+		outline: 3px solid var(--archive-preview-border);
 	}
 
 	/* Folder header */
@@ -889,11 +914,6 @@
 
 	.pixel-action-danger:hover {
 		background-color: #ff6b6b;
-	}
-
-	.pixel-archive-indicator {
-		pointer-events: none;
-		cursor: default;
 	}
 
 	/* Bookmark insert zone - заменяет gap, отступ ~5px */

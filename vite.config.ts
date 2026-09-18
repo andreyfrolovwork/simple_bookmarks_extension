@@ -15,10 +15,12 @@ export default defineConfig(({ mode }) => ({
 				assetFileNames: '[name].[ext]'
 			}
 		},
-		watch: {
-			include: ['src/**', 'public/**'],
-			exclude: ['node_modules/**', 'dist/**']
-		},
+		watch: process.argv.includes('--watch')
+			? {
+					include: ['src/**', 'public/**'],
+					exclude: ['node_modules/**', 'dist/**']
+				}
+			: undefined,
 		// Faster rebuilds in development mode
 		minify: mode === 'production' ? 'esbuild' : false,
 		sourcemap: mode === 'development'

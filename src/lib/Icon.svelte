@@ -14,6 +14,7 @@
 	import externalLink from 'pixelarticons/svg/external-link.svg?raw';
 	import trash from 'pixelarticons/svg/trash.svg?raw';
 	import archive from 'pixelarticons/svg/archive.svg?raw';
+	import chart from 'pixelarticons/svg/chart-bar.svg?raw';
 
 	let { 
 		name, 
@@ -39,7 +40,8 @@
 		'arrow-right': arrowRight,
 		'external-link': externalLink,
 		trash,
-		archive
+		archive,
+		chart
 	};
 
 	const iconSvg = $derived(icons[name] || '');

@@ -11,10 +11,10 @@ Chrome-расширение для управления закладками с 
 1. **Стек:** Svelte 5 + TypeScript + Vite + Tailwind CSS + Chrome Extension API
 2. **Режимы:** `DEV` (`npm run dev`) — тестовые данные, `PRODUCTION` (расширение) — Chrome Bookmarks API
 3. **Архитектура:** App → BookmarksBar → BookmarkFolder → Bookmark (рекурсия папок)
-4. **Сторы:** `themeStore`, `modalStore`, `searchStore`, `dragStore`, `archiveModeStore` (см. раздел «Архитектура»)
+4. **Сторы:** `themeStore`, `modalStore`, `searchStore`, `dragStore`, `archiveModeStore`, `archivePreviewStore` (см. раздел «Архитектура»)
 5. **Chrome API:** `loadBookmarks.ts`, `createBookmark.ts`, `updateBookmark.ts`, `deleteBookmark.ts`, `moveBookmark.ts`, `archiveBookmark.ts`
 6. **Стиль:** пиксель-арт UI, CSS-переменные для light/dark темы в `app.css`
-7. **Архив:** ⌘+click на ссылку/папку → перемещение в `archive` (Other Bookmarks)
+7. **Архив:** ⌘+click или слайдер unused-archive → папка `archive` (вкладка Archive); клики считаются локально в IndexedDB
 
 ---
 
@@ -195,10 +195,17 @@ type FolderType = 'bookmarks-bar' | 'other' | 'mobile';
 
 ## Публикация в Chrome Web Store
 
-1. `npm run build`
-2. `npm run pack` — создаётся `bookmark-manager.zip`
-3. Загрузить в [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
-4. Понадобятся: скриншоты (screenshot-1-dark.jpg, screenshot-2-light.jpg), promo-440x280.png, `docs/privacy.html`
+Версия **1.1.0**. Тексты для Dev Console — в `docs/cws-listing.md`.
+
+Privacy policy: https://andreyfrolovwork.github.io/simple_bookmarks_extension/privacy.html
+
+```bash
+npm run store:pack
+```
+
+Создаётся gitignored `bookmark-manager.zip`. Загрузить в [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole), вставить What's new из `docs/cws-listing.md`, отправить на review.
+
+Assets: `screenshot-1-dark.jpg`, `screenshot-2-light.jpg` (1280×800), `promo-440x280.png`.
 
 ---
 

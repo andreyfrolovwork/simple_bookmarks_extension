@@ -4,11 +4,19 @@
 	import SearchBar from './SearchBar.svelte';
 	import SearchResults from './SearchResults.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
+	import ClickStatsPanel from './ClickStatsPanel.svelte';
+	import UnusedArchiveControls from './UnusedArchiveControls.svelte';
 	import Icon from './Icon.svelte';
 	import { createBookmark } from './createBookmark';
 	import { modalStore } from './modalStore.svelte';
 	import { searchStore } from './searchStore.svelte';
 	import { prepareBookmarksForSearch } from './flattenBookmarks';
+	import {
+		ARCHIVE_FOLDER_TITLE,
+		findArchiveFolder,
+		getOrCreateArchiveFolder,
+		withoutArchiveFolder
+	} from './archiveBookmark';
 	import { onMount } from 'svelte';
 
 	let { 
@@ -23,11 +31,12 @@
 
 	let activeTab = $state<FolderType>('bookmarks-bar');
 
-	// Tab names
+	const tabOrder: FolderType[] = ['bookmarks-bar', 'other', 'mobile', 'archive'];
 	const tabNames: Record<FolderType, string> = {
 		'bookmarks-bar': 'Bookmarks Bar',
 		other: 'Other Bookmarks',
-		mobile: 'Mobile Bookmarks'
+		mobile: 'Mobile Bookmarks',
+		archive: 'Archive'
 	};
 
 	// Инициализация данных для поиска
@@ -47,10 +56,32 @@
 	// Get all folders from root
 	const rootFolders = $derived(bookmarks[0]?.children || []);
 
-	// Get bookmarks for active tab
-	const activeBookmarks = $derived(
-		rootFolders.find((item) => item.folderType === activeTab)
-	);
+	const archiveFolder = $derived(findArchiveFolder(bookmarks));
+
+	const activeBookmarks = $derived.by(() => {
+		if (activeTab === 'archive') {
+			return archiveFolder ?? {
+				id: '',
+				title: ARCHIVE_FOLDER_TITLE,
+				folderType: 'archive' as const,
+				children: []
+			};
+		}
+
+		const folder = rootFolders.find((item) => item.folderType === activeTab);
+		if (activeTab === 'other') {
+			return withoutArchiveFolder(folder);
+		}
+		return folder;
+	});
+
+	async function selectTab(tab: FolderType) {
+		activeTab = tab;
+		if (tab !== 'archive' || archiveFolder) return;
+
+		const created = await getOrCreateArchiveFolder();
+		if (created) onMove?.();
+	}
 
 	// Create new folder in empty state
 	async function handleCreateFolder(e: MouseEvent) {
@@ -87,27 +118,27 @@
 
 <div class="flex h-screen flex-col" style="background-color: var(--bg-primary);">
 	<!-- Вкладки и поиск -->
-	<div style="
-		background-color: var(--bg-surface);
-		border-bottom: 4px solid var(--border);
-		box-shadow: 0 4px 0px var(--shadow);
-	">
-		<div class="flex items-center gap-2 px-4 py-2">
-			<!-- Вкладки слева -->
+	<div class="header-stack">
+		<div class="header-row">
 			<div class="flex gap-2 {searchStore.isActive ? 'hidden' : ''}">
-				{#each Object.keys(tabNames) as tab}
+				{#each tabOrder as tab}
 					<button
-						onclick={() => (activeTab = tab as FolderType)}
+						onclick={() => selectTab(tab)}
 						class="pixel-tab"
 						class:active={activeTab === tab}
 					>
-						{tabNames[tab as FolderType]}
+						{tabNames[tab]}
 					</button>
 				{/each}
 			</div>
 
-			<!-- Поиск и тема справа -->
-			<div class="ml-auto flex items-center gap-2">
+			<div class="ml-auto flex shrink-0 items-center gap-2">
+				<UnusedArchiveControls
+					scope={activeBookmarks}
+					disabled={activeTab === 'archive'}
+					onArchived={onMove}
+				/>
+				<ClickStatsPanel {bookmarks} onArchived={onMove} />
 				<ThemeToggle />
 				<SearchBar />
 			</div>
@@ -115,7 +146,7 @@
 	</div>
 
 	<!-- Bookmark content -->
-	<div class="flex flex-1 overflow-hidden" style="background-color: var(--bg-primary);">
+	<div class="flex min-h-0 flex-1 overflow-hidden" style="background-color: var(--bg-primary);">
 		{#if !searchStore.isActive}
 			{#if activeBookmarks && activeBookmarks.children && activeBookmarks.children.length > 0}
 				<BookmarkFolder item={activeBookmarks} level={0} {onDelete} {onMove} />
@@ -125,10 +156,17 @@
 						<div style="margin-bottom: 16px;">
 							<Icon name="folder" size={48} />
 						</div>
-						<p style="font-size: 14px; margin-bottom: 8px; color: var(--text-primary);">No bookmarks yet</p>
-						<p style="font-size: 10px;">Create your first bookmark or folder to get started</p>
+						<p style="font-size: 14px; margin-bottom: 8px; color: var(--text-primary);">
+							{activeTab === 'archive' ? 'Archive is empty' : 'No bookmarks yet'}
+						</p>
+						<p style="font-size: 10px;">
+							{activeTab === 'archive'
+								? 'Archived bookmarks will appear here'
+								: 'Create your first bookmark or folder to get started'}
+						</p>
 					</div>
 					
+					{#if activeTab !== 'archive'}
 					<div class="flex gap-3">
 						<button
 							onclick={handleCreateFolder}
@@ -146,6 +184,7 @@
 							<span>Create Bookmark</span>
 						</button>
 					</div>
+					{/if}
 				</div>
 			{/if}
 		{/if}
@@ -156,6 +195,20 @@
 </div>
 
 <style>
+	.header-stack {
+		flex-shrink: 0;
+		background-color: var(--bg-surface);
+		border-bottom: 4px solid var(--border);
+		box-shadow: 0 4px 0px var(--shadow);
+	}
+
+	.header-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 8px 16px;
+	}
+
 	.pixel-tab {
 		padding: 8px 16px;
 		background-color: var(--bg-secondary);

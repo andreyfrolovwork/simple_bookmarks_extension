@@ -1,0 +1,20 @@
+---
+description: Always rebuild dist after any code changes so the unpacked Chrome extension stays up to date
+alwaysApply: true
+---
+
+# Rebuild dist after every change
+
+The unpacked extension loads from `dist/`. After any edit that affects the extension, rebuild before finishing.
+
+Applies to: `src/**`, `public/**`, `index.html`, `vite.config.*`, Tailwind/PostCSS, `package.json`.
+
+If a watcher is already running (`npm run build:watch` or `npm run dev:extension`) and rebuilt after your edits, do not start another.
+
+Otherwise:
+
+```bash
+npm run build
+```
+
+Wait until the command exits. Do not skip this for small UI or copy changes. Chrome will keep serving the old `dist/` until it is rebuilt.

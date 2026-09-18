@@ -12,7 +12,7 @@
 </head>
 <body>
   <h1>Privacy Policy — Bookmark Manager</h1>
-  <p><em>Last updated: March 11, 2026</em></p>
+  <p><em>Last updated: September 18, 2026</em></p>
 
   <h2>Data collection</h2>
   <p>Bookmark Manager does not collect, transmit, or store any personal data on external servers. All operations are performed locally in your browser.</p>
@@ -21,9 +21,12 @@
   <p>Bookmarks are managed through the Chrome Bookmarks API. Data (URLs, titles, folder structure) remains on your device and is never sent to third parties.</p>
 
   <h2>Local storage</h2>
-  <p>The extension uses browser localStorage only to save your theme preference (light/dark mode). This data stays on your device.</p>
+  <p>The extension uses browser localStorage to save your theme preference (light/dark/auto). Click history (which bookmarks you open in this manager, and when) is stored locally in IndexedDB on your device. This data is not sent to any server and is used only to show click stats and to help you archive unused bookmarks.</p>
+
+  <h2>Permissions</h2>
+  <p>The extension requests the <code>bookmarks</code> permission so it can display, create, edit, move, and archive bookmarks on the New Tab page. It does not request access to browsing history, identity, or the network.</p>
 
   <h2>Contact</h2>
-  <p>Questions about this policy: open an issue at the extension's GitHub repository.</p>
+  <p>Questions about this policy: open an issue at <a href="https://github.com/andreyfrolovwork/simple_bookmarks_extension">github.com/andreyfrolovwork/simple_bookmarks_extension</a>.</p>
 </body>
 </html>

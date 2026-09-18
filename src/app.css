@@ -24,6 +24,8 @@
 	--border: #fcfcfc;
 	--border-folder: #cbd5e0;
 	--shadow: rgba(0, 0, 0, 0.01);
+	--archive-preview: #ffb74d;
+	--archive-preview-border: #ef6c00;
 }
 
 /* CSS переменные для темной темы */
@@ -38,6 +40,8 @@
 	--border: #1c1c2f;
 	--border-folder: #4a5568;
 	--shadow: rgba(0, 0, 0, 0.03);
+	--archive-preview: #8d4b1c;
+	--archive-preview-border: #ffb74d;
 }
 
 body {

@@ -9,6 +9,8 @@
 	import { modalStore } from './modalStore.svelte';
 	import { archiveBookmark } from './archiveBookmark';
 	import { archiveModeStore } from './archiveModeStore';
+	import { recordClick } from './clickStats';
+	import { archivePreviewIds, archivePreviewOpen } from './archivePreviewStore';
 
 	let { 
 		item, 
@@ -173,7 +175,10 @@
 	}
 </script>
 
-<div class="group relative flex max-w-[350px] shrink-0 self-start">
+<div
+	class="group relative flex max-w-[350px] shrink-0 self-start"
+	class:archive-preview={$archivePreviewOpen && $archivePreviewIds.has(item.id)}
+>
 	<!-- "Insert before" indicator -->
 	{#if dropPosition === 'before'}
 		<div 
@@ -204,7 +209,9 @@
 		onclick={(e) => {
 			if (e.metaKey) {
 				handleArchive(e);
+				return;
 			}
+			void recordClick({ id: item.id, url: item.url, title: item.title });
 		}}
 		class="pixel-bookmark"
 		class:dragging={isDragging}
@@ -225,26 +232,27 @@
 		</span>
 		<span class="bookmark-title">{item.title}</span>
 	</a>
-	{#if $archiveModeStore}
-		<span class="pixel-archive-btn" title="⌘+click to archive">
-			<Icon name="archive" size={12} />
-		</span>
-	{:else}
-		<button
-			onclick={handleEdit}
-			class="pixel-edit-btn"
-			title="Edit"
-		>
-			<Icon name="edit" size={12} />
-		</button>
-		<button
-			onclick={handleDelete}
-			class="pixel-delete-btn"
-			title="Delete"
-		>
-			<Icon name="close" size={12} />
-		</button>
-	{/if}
+	<button
+		onclick={handleArchive}
+		class="pixel-archive-btn"
+		title="Archive"
+	>
+		<Icon name="archive" size={12} />
+	</button>
+	<button
+		onclick={handleEdit}
+		class="pixel-edit-btn"
+		title="Edit"
+	>
+		<Icon name="edit" size={12} />
+	</button>
+	<button
+		onclick={handleDelete}
+		class="pixel-delete-btn"
+		title="Delete"
+	>
+		<Icon name="close" size={12} />
+	</button>
 </div>
 
 <style>
@@ -302,7 +310,8 @@
 	}
 
 	.pixel-edit-btn,
-	.pixel-delete-btn {
+	.pixel-delete-btn,
+	.pixel-archive-btn {
 		position: absolute;
 		top: -8px;
 		width: 24px;
@@ -324,6 +333,10 @@
 		right: -8px;
 	}
 
+	.pixel-archive-btn {
+		right: 20px;
+	}
+
 	.pixel-delete-btn {
 		left: -8px;
 	}
@@ -334,29 +347,7 @@
 		opacity: 1;
 	}
 
-	.pixel-archive-btn {
-		position: absolute;
-		top: -8px;
-		right: -8px;
-		width: 24px;
-		height: 24px;
-		background-color: var(--bg-secondary);
-		border: 2px solid var(--border);
-		color: var(--text-primary);
-		font-size: 12px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		opacity: 0;
-		transition: opacity 0.2s, transform 0.1s steps(2), box-shadow 0.1s;
-		box-shadow: 2px 2px 0px var(--shadow);
-		pointer-events: none;
-	}
-
-	.pixel-archive-btn:hover {
-		background-color: var(--accent-secondary);
-	}
-
+	.pixel-archive-btn:hover,
 	.pixel-edit-btn:hover {
 		background-color: var(--accent-secondary);
 		transform: translate(-1px, -1px);
@@ -370,9 +361,16 @@
 	}
 
 	.pixel-edit-btn:active,
-	.pixel-delete-btn:active {
+	.pixel-delete-btn:active,
+	.pixel-archive-btn:active {
 		transform: translate(1px, 1px);
 		box-shadow: 1px 1px 0px var(--shadow);
+	}
+
+	.archive-preview .pixel-bookmark {
+		background-color: var(--archive-preview);
+		outline: 3px solid var(--archive-preview-border);
+		outline-offset: 1px;
 	}
 </style>
 

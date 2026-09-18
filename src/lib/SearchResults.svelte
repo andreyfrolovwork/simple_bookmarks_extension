@@ -2,6 +2,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { searchStore } from './searchStore.svelte';
 	import Icon from './Icon.svelte';
+	import { recordClick } from './clickStats';
 
 	let faviconErrors = $state<Set<string>>(new Set());
 
@@ -20,8 +21,10 @@
 	}
 
 	// Открытие закладки
-	function openBookmark(url: string) {
-		window.open(url, '_blank', 'noopener,noreferrer');
+	function openBookmark(item: { id: string; url?: string; title: string }) {
+		if (!item.url) return;
+		void recordClick({ id: item.id, url: item.url, title: item.title });
+		window.open(item.url, '_blank', 'noopener,noreferrer');
 	}
 
 	// Закрытие поиска
@@ -94,7 +97,7 @@
 				{#if searchStore.resultsCount > 0}
 					{#each searchStore.results as result (result.item.id)}
 						<button
-							onclick={() => openBookmark(result.item.url || '')}
+							onclick={() => openBookmark(result.item)}
 							class="pixel-result-item"
 						>
 							<!-- Favicon -->

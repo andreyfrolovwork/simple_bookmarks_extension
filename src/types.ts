@@ -9,8 +9,8 @@ export interface BookmarkItem {
 	index?: number;
 	parentId?: string;
 	syncing?: boolean;
-	folderType?: 'bookmarks-bar' | 'other' | 'mobile';
+	folderType?: 'bookmarks-bar' | 'other' | 'mobile' | 'archive';
 }
 
-export type FolderType = 'bookmarks-bar' | 'other' | 'mobile';
+export type FolderType = 'bookmarks-bar' | 'other' | 'mobile' | 'archive';
 

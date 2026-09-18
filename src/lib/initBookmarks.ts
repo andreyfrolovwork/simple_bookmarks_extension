@@ -47,6 +47,12 @@ const INIT_BOOKMARKS: BookmarkItem[] = [
 						title: 'MDN',
 						url: 'https://developer.mozilla.org',
 						dateAdded: Date.now()
+					},
+					{
+						id: '12',
+						title: 'archive',
+						folderType: 'archive',
+						children: []
 					}
 				]
 			},

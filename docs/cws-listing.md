@@ -84,6 +84,17 @@ Optional before submit: replace screenshots with 1280×800 shots of the Archive 
 
 ## Submit checklist
 
+Automated (after GitHub secrets, see `docs/cws-automation.md`):
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+That uploads a draft. Then in Dev Console confirm listing text, privacy URL, and screenshots, and submit if the Action did not run with **publish**.
+
+Manual fallback:
+
 1. `npm run store:pack`
 2. Dashboard → Bookmark Manager → Upload new package → `bookmark-manager.zip`
 3. Paste short / detailed / what's new text above

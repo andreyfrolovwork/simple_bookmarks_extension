@@ -10,6 +10,7 @@
     "build:watch": "vite build --watch",
     "pack": "cd dist && zip -r ../bookmark-manager.zip . -x '*.map' -x '*.DS_Store' -x '**/.DS_Store'",
     "store:pack": "npm test && npm run build && npm run pack",
+    "store:upload": "npx --yes chrome-webstore-upload-cli@4 upload --source bookmark-manager.zip",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run --config vitest.config.ts"

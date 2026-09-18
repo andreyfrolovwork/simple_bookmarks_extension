@@ -195,7 +195,7 @@ type FolderType = 'bookmarks-bar' | 'other' | 'mobile';
 
 ## Публикация в Chrome Web Store
 
-Версия **1.1.0**. Тексты для Dev Console — в `docs/cws-listing.md`.
+Версия **1.1.0**. Тексты для Dev Console — в `docs/cws-listing.md`. Автозагрузка zip — в `docs/cws-automation.md`.
 
 Privacy policy: https://andreyfrolovwork.github.io/simple_bookmarks_extension/privacy.html
 
@@ -203,7 +203,16 @@ Privacy policy: https://andreyfrolovwork.github.io/simple_bookmarks_extension/pr
 npm run store:pack
 ```
 
-Создаётся gitignored `bookmark-manager.zip`. Загрузить в [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole), вставить What's new из `docs/cws-listing.md`, отправить на review.
+Локально: gitignored `bookmark-manager.zip`.
+
+После секретов в GitHub:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+Action **Chrome Web Store** заливает zip как draft. Модерацию Google не пропускает.
 
 Assets: `screenshot-1-dark.jpg`, `screenshot-2-light.jpg` (1280×800), `promo-440x280.png`.
 
